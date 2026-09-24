@@ -3,6 +3,11 @@ Diagnóstico Territorial de Focos de Calor
 Sala de Informações e Monitoramento de Desastres (SIMD) - CEDEC/PA
 ====================================================================
 
+DOWNLOAD OFICIAL
+- Baixe o sistema e suas atualizações SOMENTE pela página oficial:
+  https://github.com/engamblobs/Autosimd-Focos/releases
+  Não use cópias recebidas por e-mail, WhatsApp, pen drive ou outros sites.
+
 REQUISITOS
 - Windows 10 ou 11 (64 bits). Não é preciso instalar Python nem ter internet.
 - Cerca de 2 GB livres em disco.
@@ -34,6 +39,10 @@ PROBLEMAS COMUNS
 - O Windows mostrou "O Windows protegeu o computador": clique em
   "Mais informações" e depois em "Executar assim mesmo".
 - A janela preta fechou com erro: tire um print da mensagem e envie ao suporte.
+
+SOBRE O DESENVOLVIMENTO
+- Todo o código foi desenvolvido com utilização de Inteligência Artificial,
+  com acompanhamento e testes pelos técnicos de Defesa Civil da CEDEC/PA.
 
 SUPORTE
 - simdcedec@gmail.com | engamb.lobs@gmail.com

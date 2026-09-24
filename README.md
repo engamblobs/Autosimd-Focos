@@ -1,9 +1,16 @@
+<p align="center">
+  <img src="core/logos/AUTOSIMD-FOCOS.png" alt="AutoSIMD-FOCOS" width="520">
+</p>
+
 # AutoSIMD-FOCOS
 
 **Diagnóstico Territorial de Focos de Calor**
 Sala de Informações e Monitoramento de Desastres (SIMD) — Coordenadoria Estadual de Proteção e Defesa Civil do Pará (CEDEC/PA)
 
 O AutoSIMD-FOCOS automatiza a análise histórica de focos de calor detectados por satélite (BDQueimadas/INPE) e gera, em poucos segundos, um diagnóstico territorial pronto para apoiar o planejamento de prevenção e combate a incêndios florestais.
+
+> [!IMPORTANT]
+> **Desenvolvido com Inteligência Artificial.** Todo o código deste programa foi desenvolvido com a utilização de ferramentas de Inteligência Artificial, com acompanhamento, revisão e testes realizados pelos técnicos de Defesa Civil da CEDEC/PA. Os resultados são produzidos automaticamente a partir de bases públicas oficiais e devem ser interpretados por profissionais habilitados. A identidade visual (logo do AutoSIMD-FOCOS) também foi gerada com IA (ChatGPT).
 
 ## O que o programa faz
 
@@ -29,13 +36,23 @@ Níveis de análise disponíveis:
 
 > As bases de UC e TI incluídas nesta versão cobrem o estado do Pará.
 
+## Download oficial
+
+> [!WARNING]
+> Baixe o AutoSIMD-FOCOS **somente** pela página oficial do projeto no GitHub:
+> **https://github.com/engamblobs/Autosimd-Focos/releases**
+>
+> Não utilize cópias recebidas por e-mail, WhatsApp, pen drive ou outros sites. Arquivos de outras origens podem estar desatualizados ou ter sido modificados e conter vírus. Em caso de dúvida, confirme com a SIMD/CEDEC-PA antes de executar.
+
+Na página de Releases, a versão mais recente aparece no topo com a etiqueta **Latest**. Em **Assets**, clique no arquivo `AutoSIMD-FOCOS_v<versão>.zip` para baixar. Os arquivos *Source code (zip)* e *Source code (tar.gz)* contêm apenas o código-fonte, sem as bases de dados, e **não servem para instalar** o programa.
+
 ## Instalação no Windows
 
 Não é preciso instalar Python nem ter internet: o pacote já traz tudo.
 
 **Requisitos:** Windows 10 ou 11 (64 bits) e cerca de 2 GB livres em disco.
 
-1. Acesse a página **[Releases](https://github.com/engamblobs/Autosimd-Focos/releases/latest)** e baixe o arquivo `AutoSIMD-FOCOS_v<versão>.zip` (≈ 300 MB).
+1. Baixe o arquivo `AutoSIMD-FOCOS_v<versão>.zip` (≈ 300 MB) na **[página oficial de Releases](https://github.com/engamblobs/Autosimd-Focos/releases/latest)**, conforme a seção [Download oficial](#download-oficial).
 2. Clique com o botão direito no arquivo baixado → **Extrair tudo…** e escolha uma pasta (ex.: `C:\AutoSIMD-FOCOS`).
    **Não execute de dentro do .zip** — extraia primeiro.
 3. Abra a pasta extraída e dê dois cliques em **`Iniciar_AutoSIMD-FOCOS.bat`**.
@@ -47,7 +64,7 @@ Não é preciso instalar Python nem ter internet: o pacote já traz tudo.
 
 **Para atualizar as bases de dados:** substitua os arquivos dentro de `BASES_GEOJSON\` mantendo exatamente os mesmos nomes (`bdqueimadas_consolidado.parquet`, `mun-brGEOJSON\NM_UF_<Estado>.geojson`, `ucGEOJSON\UC-BR.geojson`, `tiGEOJSON\TI-BR.geojson`) e reabra o sistema.
 
-**Para atualizar o programa:** baixe o `.zip` da nova versão, extraia em uma nova pasta e abra o `.bat` dela uma vez — o atalho da Área de Trabalho passa a apontar para a versão nova.
+**Para atualizar o programa:** baixe o `.zip` da nova versão na página oficial de Releases, extraia em uma nova pasta e abra o `.bat` dela uma vez — o atalho da Área de Trabalho passa a apontar para a versão nova.
 
 ## Fontes de dados
 

@@ -31,7 +31,7 @@ from reportlab.platypus import (
 # Configurações e Dicionários Institucionais
 # ----------------------------------------------------------------------
 PATH_LOGOS_DIR = "/home/lobs/Automacoes/AUTOSIMD-FOCOS/core/logos"
-PATH_BRASAO_PARA = os.path.join(PATH_LOGOS_DIR, "BRASAO-PARA.png")
+PATH_LOGO_AUTOSIMD = os.path.join(PATH_LOGOS_DIR, "AUTOSIMD-FOCOS.png")
 PATH_CBM_CEDEC = os.path.join(PATH_LOGOS_DIR, "CBM-CEDEC.png")
 DATA_DIR = "/home/lobs/SIG/FOCOS DE CALOR"
 PATH_KML_DIR = "/home/lobs/SIG/munKML"
@@ -598,7 +598,7 @@ def generate_full_report(dados, output_filename="relatorio_completo_altamira.pdf
     # ==================================================================
     # PÁGINA 1: DIAGNÓSTICO MUNICIPAL
     # ==================================================================
-    img_esq = Image(PATH_BRASAO_PARA, width=42, height=48) if os.path.exists(PATH_BRASAO_PARA) else Paragraph("<b>[PARÁ]</b>", body_style)
+    img_esq = Image(PATH_LOGO_AUTOSIMD, width=42, height=48) if os.path.exists(PATH_LOGO_AUTOSIMD) else Paragraph("<b>[PARÁ]</b>", body_style)
     img_dir = Image(PATH_CBM_CEDEC, width=60, height=44) if os.path.exists(PATH_CBM_CEDEC) else Paragraph("<b>[CBM]</b>", body_style)
 
     header_text = Paragraph(

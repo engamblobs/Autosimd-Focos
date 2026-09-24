@@ -18,7 +18,7 @@ from shapely.geometry import shape
 # Configurações de Caminhos
 # ----------------------------------------------------------------------
 PATH_LOGOS_DIR = "/home/lobs/Automacoes/AUTOSIMD-FOCOS/core/logos"
-PATH_BRASAO_PARA = os.path.join(PATH_LOGOS_DIR, "BRASAO-PARA.png")
+PATH_LOGO_AUTOSIMD = os.path.join(PATH_LOGOS_DIR, "AUTOSIMD-FOCOS.png")
 PATH_CBM_CEDEC = os.path.join(PATH_LOGOS_DIR, "CBM-CEDEC.png")
 TI_GEOJSON_PATH = "/home/lobs/SIG/BASES_GEOJSON/tiGEOJSON/TI-BR.geojson"
 UC_GEOJSON_PATH = "/home/lobs/SIG/BASES_GEOJSON/ucGEOJSON/UC-BR.geojson"

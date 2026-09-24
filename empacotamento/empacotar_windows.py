@@ -138,7 +138,7 @@ def montar_app(destino, versao, data):
         PROJETO / "core" / "dicionario_municipios-regioes.py",
         destino / "core" / "dicionario_municipios-regioes.py",
     )
-    for logo in ("BRASAO-PARA.png", "CBM-CEDEC.png", "AutoSIMD-FOCOS.ico"):
+    for logo in ("AUTOSIMD-FOCOS.png", "CBM-CEDEC.png", "AutoSIMD-FOCOS.ico"):
         copiar(PROJETO / "core" / "logos" / logo, destino / "core" / "logos" / logo)
     copiar(PASTA_EMPACOTAMENTO / "iniciar.py", destino / "iniciar.py")
     copiar(PASTA_EMPACOTAMENTO / "config.toml", destino / ".streamlit" / "config.toml")

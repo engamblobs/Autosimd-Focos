@@ -54,7 +54,7 @@ BASES_DIR = os.path.join(BASE_DIR, "BASES_GEOJSON")
 CORE_DIR = os.path.join(BASE_DIR, "core")
 
 PATH_LOGOS_DIR = os.path.join(CORE_DIR, "logos")
-PATH_BRASAO_PARA = os.path.join(PATH_LOGOS_DIR, "BRASAO-PARA.png")
+PATH_LOGO_AUTOSIMD = os.path.join(PATH_LOGOS_DIR, "AUTOSIMD-FOCOS.png")
 PATH_CBM_CEDEC = os.path.join(PATH_LOGOS_DIR, "CBM-CEDEC.png")
 TI_GEOJSON_PATH = os.path.join(BASES_DIR, "tiGEOJSON", "TI-BR.geojson")
 UC_GEOJSON_PATH = os.path.join(BASES_DIR, "ucGEOJSON", "UC-BR.geojson")
@@ -309,10 +309,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def render_header(alvo_sel="SELECIONE"):
-    col1, col2, col3 = st.columns([1.2, 5, 1.2])
+    col1, col2, col3 = st.columns([2, 4.4, 1.2])
     with col1:
-        if os.path.exists(PATH_BRASAO_PARA):
-            st.image(PATH_BRASAO_PARA, width=90)
+        if os.path.exists(PATH_LOGO_AUTOSIMD):
+            st.image(PATH_LOGO_AUTOSIMD, width=210)
     with col2:
         st.markdown(f"""
             <div class="main-header">
@@ -384,6 +384,10 @@ def calcular_area_km2(geom):
 def formatar_numero_br(valor, casas=0):
     """Formata número no padrão brasileiro (1.234,5)."""
     return f"{valor:,.{casas}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+def formatar_posicao(posicao, total):
+    """Posição no ranking; posição 0 significa município sem focos no recorte."""
+    return f"{posicao}º de {total}" if posicao else "Sem focos"
 
 def formatar_densidade(densidade):
     if densidade is None:
@@ -1172,18 +1176,18 @@ def _get_pdf_styles():
         ),
     }
 
+def imagem_pdf_proporcional(caminho, largura):
+    """Imagem do ReportLab com a largura dada e altura pela proporção real do arquivo."""
+    if not os.path.exists(caminho):
+        return ""
+    with PILImage.open(caminho) as img:
+        w, h = img.size
+    return Image(caminho, width=largura, height=largura * h / w)
+
 def _build_pdf_header(municipio, ano_inicio, ano_fim, styles):
-    """Constrói o cabeçalho oficial com brasões e títulos."""
-    img_brasao = (
-        Image(PATH_BRASAO_PARA, width=50, height=60)
-        if os.path.exists(PATH_BRASAO_PARA)
-        else ""
-    )
-    img_cedec = (
-        Image(PATH_CBM_CEDEC, width=60, height=60)
-        if os.path.exists(PATH_CBM_CEDEC)
-        else ""
-    )
+    """Constrói o cabeçalho oficial com logos e títulos."""
+    img_autosimd = imagem_pdf_proporcional(PATH_LOGO_AUTOSIMD, largura=110)
+    img_cedec = imagem_pdf_proporcional(PATH_CBM_CEDEC, largura=65)
 
     header_text = [
         Paragraph(
@@ -1203,7 +1207,7 @@ def _build_pdf_header(municipio, ano_inicio, ano_fim, styles):
     ]
 
     header_table = Table(
-        [[img_brasao, header_text, img_cedec]], colWidths=[65, 405, 65]
+        [[img_autosimd, header_text, img_cedec]], colWidths=[118, 347, 70]
     )
     header_table.setStyle(
         TableStyle([
@@ -1241,8 +1245,8 @@ def _build_pdf_kpis(kpis, styles):
         ),
         _valores(
             formatar_numero_br(kpis["focos_ano_atual"]),
-            f"{kpis['pos_hist']}º de {kpis['total_muns_estado']}",
-            f"{kpis['pos_atual']}º de {kpis['total_muns_ano']}",
+            formatar_posicao(kpis["pos_hist"], kpis["total_muns_estado"]),
+            formatar_posicao(kpis["pos_atual"], kpis["total_muns_ano"]),
         ),
         _rotulos(
             f"Participação no total do estado ({ano_fim})",
@@ -1802,7 +1806,7 @@ if btn_processar:
         )
         k2.metric(
             f"Posição no estado — acumulado {ano_inicio_sel}–{ano_fim_sel}",
-            f"{pos_hist}º de {total_muns_estado}",
+            formatar_posicao(pos_hist, total_muns_estado),
             help=(
                 f"Posição do município entre os municípios do estado ({estado_selecionado}) "
                 f"com focos, somando todos os focos de {ano_inicio_sel} a {ano_fim_sel}."
@@ -1810,7 +1814,7 @@ if btn_processar:
         )
         k3.metric(
             f"Posição no estado — {ano_fim_sel}",
-            f"{pos_atual}º de {len(muns_atual)}",
+            formatar_posicao(pos_atual, len(muns_atual)),
             help=(
                 f"Posição do município entre os municípios do estado ({estado_selecionado}) "
                 f"considerando apenas os focos de {ano_fim_sel}."
