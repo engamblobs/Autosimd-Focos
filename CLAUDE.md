@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AutoSIMD-FOCOS: a Streamlit app that produces territorial diagnostics of heat spots / fire foci (INPE BDQueimadas data) for the Defesa Civil do Pará (CEDEC/PA – SIMD). The user picks a target (State/Municipality, Conservation Unit – UC, or Indigenous Land – TI) and a year range, and the app generates charts, maps, rankings, a PDF report, an Excel sheet, a 10x10 km QGIS grid (.geojson) and a ZIP bundle of everything. All code, identifiers, UI text and comments are in Brazilian Portuguese; keep that convention.
 
-Not a git repo. No test suite, linter or build step exists.
+Git repo: https://github.com/engamblobs/Autosimd-Focos (branch `main`, commits as engamblobs <engamb.lobs@gmail.com>; `gh` is authenticated). Each released version gets a tag `v<APP_VERSAO>` and a GitHub Release with the Windows `.zip` attached (`gh release create`). `.gitignore` excludes `BASES_GEOJSON/`, `dist/` and `python/`. No test suite or linter exists.
 
 ## Running
 
