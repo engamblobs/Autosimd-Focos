@@ -1,0 +1,13 @@
+# Bases de dados (grandes; distribuídas no .zip da Release)
+BASES_GEOJSON/
+
+# Pacote Windows gerado e Python portátil baixado pelo empacotamento
+dist/
+python/
+
+# Python
+__pycache__/
+*.pyc
+
+# Gerado pelo inicializador no Windows
+.atalho_criado

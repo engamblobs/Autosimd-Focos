@@ -1,0 +1,39 @@
+AutoSIMD-FOCOS {versao} ({data})
+Diagnóstico Territorial de Focos de Calor
+Sala de Informações e Monitoramento de Desastres (SIMD) - CEDEC/PA
+====================================================================
+
+REQUISITOS
+- Windows 10 ou 11 (64 bits). Não é preciso instalar Python nem ter internet.
+- Cerca de 2 GB livres em disco.
+
+COMO ABRIR
+1. Extraia o arquivo .zip inteiro para uma pasta (ex.: C:\AutoSIMD-FOCOS).
+   Não execute de dentro do .zip.
+2. Dê dois cliques em "Iniciar_AutoSIMD-FOCOS.bat".
+3. Uma janela preta abre e, em alguns segundos, o sistema aparece no navegador.
+4. Na primeira vez, é criado na Área de Trabalho o atalho "AutoSIMD-FOCOS"
+   (com o ícone da Sala de Monitoramento). Das próximas vezes, use o atalho.
+   Se mover a pasta do sistema de lugar, abra o .bat uma vez para
+   atualizar o atalho.
+
+COMO ENCERRAR
+- Feche a janela preta. Fechar só o navegador deixa o sistema rodando;
+  para voltar a ele, basta abrir o .bat de novo.
+
+ATUALIZAR AS BASES DE DADOS
+- As bases ficam na pasta BASES_GEOJSON. Para atualizar, substitua o arquivo
+  mantendo exatamente o mesmo nome:
+    BASES_GEOJSON\bdqueimadas_consolidado.parquet   (focos de calor)
+    BASES_GEOJSON\mun-brGEOJSON\NM_UF_<Estado>.geojson  (municípios)
+    BASES_GEOJSON\ucGEOJSON\UC-BR.geojson           (Unidades de Conservação)
+    BASES_GEOJSON\tiGEOJSON\TI-BR.geojson           (Terras Indígenas)
+- Depois de substituir, feche e abra o sistema novamente.
+
+PROBLEMAS COMUNS
+- O Windows mostrou "O Windows protegeu o computador": clique em
+  "Mais informações" e depois em "Executar assim mesmo".
+- A janela preta fechou com erro: tire um print da mensagem e envie ao suporte.
+
+SUPORTE
+- simdcedec@gmail.com | engamb.lobs@gmail.com

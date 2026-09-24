@@ -1,0 +1,18 @@
+# Configuração do Streamlit para o pacote Windows (uso local e offline)
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = true
+address = "localhost"
+fileWatcherType = "none"
+runOnSave = false
+
+[global]
+developmentMode = false
+
+[client]
+toolbarMode = "viewer"
+
+[logger]
+level = "error"

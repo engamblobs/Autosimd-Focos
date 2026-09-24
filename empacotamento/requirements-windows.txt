@@ -1,0 +1,11 @@
+# Versões testadas no fortracc2-env (Linux) e instaladas no pacote Windows (cp313, win_amd64)
+streamlit==1.61.1
+pandas==3.0.3
+numpy==2.4.6
+pyarrow==23.0.1
+matplotlib==3.10.9
+shapely==2.1.2
+pyproj==3.7.2
+reportlab==5.0.0
+pillow==12.2.0
+openpyxl==3.1.5
