@@ -16,7 +16,7 @@ O AutoSIMD-FOCOS automatiza a análise histórica de focos de calor detectados p
 
 Você escolhe **o território** e **o período de anos**, clica em **Processar Diagnóstico Completo** e o sistema gera:
 
-- **Resumo executivo** — focos no ano, posição do município no ranking estadual (acumulado e no ano), participação no total do estado, variação em relação ao ano anterior e **densidade média anual de focos (focos/km²/ano)**.
+- **Resumo executivo** — focos no ano, posição do município no ranking nacional e estadual do ano, participação no total do estado, variação em relação ao ano anterior e **densidade média anual de focos (focos/km²/ano)**.
 - **Gráficos** — Top 5 municípios do estado, evolução anual dos focos e padrão sazonal (distribuição mensal).
 - **Mapas**
   1. Dispersão espacial dos focos no último ano, com as **Unidades de Conservação e Terras Indígenas** existentes no município desenhadas e identificadas;
@@ -34,7 +34,7 @@ Níveis de análise disponíveis:
 | Unidade de Conservação (UC) | Estação Ecológica da Terra do Meio |
 | Terra Indígena (TI) | TI Apyterewa |
 
-> As bases de UC e TI incluídas nesta versão cobrem o estado do Pará.
+> As bases de Unidades de Conservação (CNUC/MMA, 1.805 UCs) e Terras Indígenas (FUNAI, 637 TIs) cobrem todo o Brasil.
 
 ## Download oficial
 

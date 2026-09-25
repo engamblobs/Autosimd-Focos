@@ -46,7 +46,8 @@ Single-file Streamlit script (~2000 lines), top-to-bottom execution:
 
 ## Supporting scripts
 
-- `AUTO.py` — one-off streaming converter (ijson → pyarrow) from the huge consolidated BDQueimadas GeoJSON to the Parquet the app reads. Defines the Parquet schema; keep it in sync with the columns `app.py` expects.
+- `ferramentas/atualizar_area_protegida_focos.py` — rewrites the `TI` or `UC` column of the foci Parquet by point-in-polygon against a GeoJSON (label `NOME (CÓDIGO)` uppercased, `NONE` when outside, smallest polygon wins on overlaps; backs up the Parquet to `BASES_GEOJSON/backup/` first). TI was rebuilt from FUNAI's `tiGEOJSON/TI-BR.geojson` (`terrai_nom`/`terrai_cod`, all Brazil) and UC from CNUC's `ucGEOJSON/UC-BR.geojson` (`NOME_UC1`/`ID_UC0`, all Brazil). `rotulo_area_protegida` in `app.py` rebuilds the same `NOME (CÓDIGO)` label to find a polygon — keep both in sync if the source fields change.
+- `AUTO.py` — one-off streaming converter (ijson → pyarrow) from the huge consolidated BDQueimadas GeoJSON to the Parquet the app reads. Defines the Parquet schema; keep it in sync with the columns `app.py` expects. Re-running it would revert the TI/UC columns to the old source data — rerun the `ferramentas/` script afterwards.
 - `core/baixarregioes.py` — generates the municipality→region dictionary from the region lists (source text also in `regioesdeintegracao`).
 - `core/analytics.py`, `core/viz.py` — standalone analytics/Plotly modules, **not imported by `app.py`**. `core/loader.py` and `core/exporter.py` are empty placeholders. `core/teste-santarem.py`, `core/testes_pdf.py` are experiments.
 - `PAINELFOGO/main.py` — standalone experiment querying the SIPAM "Painel do Fogo" API.
