@@ -11,3 +11,6 @@ __pycache__/
 
 # Gerado pelo inicializador no Windows
 .atalho_criado
+
+# Backups de editores
+*~
