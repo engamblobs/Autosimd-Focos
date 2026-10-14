@@ -57,7 +57,7 @@ Não é preciso instalar Python nem ter internet: o pacote já traz tudo.
    **Não execute de dentro do .zip** — extraia primeiro.
 3. Abra a pasta extraída e dê dois cliques em **`Iniciar_AutoSIMD-FOCOS.bat`**.
 4. Se o Windows exibir *"O Windows protegeu o computador"*, clique em **Mais informações → Executar assim mesmo**.
-5. Uma janela preta abre e, em alguns segundos, o sistema aparece no navegador (endereço `http://localhost:8501`).
+5. Uma janela preta abre e, em alguns segundos, o sistema aparece no navegador (endereço `http://127.0.0.1:8521`; se essa porta estiver em uso por outro programa, o sistema usa automaticamente a próxima livre — 8522, 8523…). Pode ser usado ao mesmo tempo que outros sistemas da SIMD que rodam no navegador.
 6. Na primeira execução é criado o atalho **AutoSIMD-FOCOS** na Área de Trabalho, com o ícone da Sala — use-o nas próximas vezes.
 
 **Para encerrar:** feche a janela preta. Fechar apenas o navegador deixa o sistema rodando; para voltar, abra o atalho novamente.

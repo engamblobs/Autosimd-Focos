@@ -142,6 +142,10 @@ def montar_app(destino, versao, data):
         copiar(PROJETO / "core" / "logos" / logo, destino / "core" / "logos" / logo)
     copiar(PASTA_EMPACOTAMENTO / "iniciar.py", destino / "iniciar.py")
     copiar(PASTA_EMPACOTAMENTO / "config.toml", destino / ".streamlit" / "config.toml")
+    copiar(
+        PASTA_EMPACOTAMENTO / "static" / "autosimd_focos.txt",
+        destino / "static" / "autosimd_focos.txt",
+    )
     escrever_crlf(
         (PASTA_EMPACOTAMENTO / "Iniciar_AutoSIMD-FOCOS.bat").read_text(encoding="utf-8"),
         destino / "Iniciar_AutoSIMD-FOCOS.bat",

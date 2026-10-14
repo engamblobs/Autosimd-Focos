@@ -230,8 +230,8 @@ def exportar_pacote_analise(
     return zip_buffer.getvalue(), f"{nome_base}_{ano_inicio}_{ano_fim}.zip"
 
 # Versão do sistema — atualizar a cada nova versão salva em historico/app_<versão>_<AAAAMMDD>.py
-APP_VERSAO = "0.09"
-APP_VERSAO_DATA = "24/09/2026"
+APP_VERSAO = "0.10"
+APP_VERSAO_DATA = "14/10/2026"
 
 # Configuração do Streamlit
 st.set_page_config(
