@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Atualiza o campo TI ou UC da base de focos (bdqueimadas_consolidado.parquet)
 cruzando cada foco (lon/lat) com os polígonos de uma base GeoJSON.
@@ -5,7 +6,8 @@ cruzando cada foco (lon/lat) com os polígonos de uma base GeoJSON.
 - Rótulo gravado: "NOME (CÓDIGO)" em maiúsculas (o código desambigua nomes repetidos).
 - Foco fora de qualquer polígono recebe "NONE" (padrão da base).
 - Foco dentro de mais de um polígono (áreas sobrepostas) fica com o de menor área.
-- Antes de sobrescrever, a base atual é copiada para BASES_GEOJSON/backup/.
+- Antes de sobrescrever, a base atual é copiada para backup/bases/.
+- O rótulo precisa bater com ``core.territorios.rotulo_area_protegida`` (docs/03 §3).
 
 Uso:
     python ferramentas/atualizar_area_protegida_focos.py TI BASES_GEOJSON/tiGEOJSON/TI-BR.geojson \
@@ -15,6 +17,7 @@ Uso:
 import argparse
 import json
 import shutil
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -27,7 +30,11 @@ from shapely.geometry import shape
 from shapely.validation import make_valid
 
 PROJETO = Path(__file__).resolve().parent.parent
-PARQUET_PADRAO = PROJETO / "BASES_GEOJSON" / "bdqueimadas_consolidado.parquet"
+sys.path.insert(0, str(PROJETO))
+
+from core.config import caminho_focos  # noqa: E402
+
+PARQUET_PADRAO = caminho_focos()
 VALOR_VAZIO = "NONE"
 
 
@@ -95,10 +102,10 @@ def main():
     rotulos = np.array([p["rotulo"] for p in poligonos] + [VALOR_VAZIO], dtype=object)
     novo = rotulos[indice]  # índice -1 aponta para VALOR_VAZIO (último)
 
-    backup = args.parquet.parent / "backup" / (
+    backup = PROJETO / "backup" / "bases" / (
         f"{args.parquet.stem}_antes_{args.campo}_{datetime.now():%Y%m%d_%H%M%S}.parquet"
     )
-    backup.parent.mkdir(exist_ok=True)
+    backup.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(args.parquet, backup)
     print(f"Backup da base anterior: {backup}")
 

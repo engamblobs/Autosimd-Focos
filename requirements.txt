@@ -1,0 +1,13 @@
+# Versões do ambiente de desenvolvimento (fortracc2-env, Python 3.14) — iguais às do pacote Windows
+streamlit==1.61.1
+altair==6.2.2
+pandas==3.0.3
+numpy==2.4.6
+pyarrow==23.0.1
+matplotlib==3.10.9
+shapely==2.1.2
+pyproj==3.7.2
+reportlab==5.0.0
+pillow==12.2.0
+openpyxl==3.1.5
+pytest==9.1.1

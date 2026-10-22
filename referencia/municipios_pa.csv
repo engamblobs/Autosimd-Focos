@@ -1,0 +1,145 @@
+ibge;nome_oficial;variacoes;regiao_integracao;regiao_geografica_intermediaria
+1500107;Abaetetuba;;Região Tocantins;Belém
+1500131;Abel Figueiredo;;Região Rio Capim;Marabá
+1500206;Acará;;Região Tocantins;Belém
+1500305;Afuá;;Região Marajó;Breves
+1500347;Água Azul do Norte;;Região Araguaia;Redenção
+1500404;Alenquer;;Região Baixo Amazonas;Santarém
+1500503;Almeirim;;Região Baixo Amazonas;Altamira
+1500602;Altamira;;Região Xingu;Altamira
+1500701;Anajás;;Região Marajó;Breves
+1500800;Ananindeua;;Região Guajará;Belém
+1500859;Anapu;;Região Xingu;Altamira
+1500909;Augusto Corrêa;;Região Rio Caeté;Castanhal
+1500958;Aurora do Pará;;Região Rio Capim;Castanhal
+1501006;Aveiro;;Região Tapajós;Santarém
+1501105;Bagre;;Região Marajó;Breves
+1501204;Baião;;Região Tocantins;Marabá
+1501253;Bannach;;Região Araguaia;Redenção
+1501303;Barcarena;;Região Tocantins;Belém
+1501402;Belém;;Região Guajará;Belém
+1501451;Belterra;;Região Baixo Amazonas;Santarém
+1501501;Benevides;;Região Guajará;Belém
+1501576;Bom Jesus do Tocantins;;Região Carajás;Marabá
+1501600;Bonito;;Região Rio Caeté;Castanhal
+1501709;Bragança;;Região Rio Caeté;Castanhal
+1501725;Brasil Novo;;Região Xingu;Altamira
+1501758;Brejo Grande do Araguaia;;Região Carajás;Marabá
+1501782;Breu Branco;;Região Lago Tucuruí;Marabá
+1501808;Breves;;Região Marajó;Breves
+1501907;Bujaru;;Região Rio Capim;Belém
+1502004;Cachoeira do Arari;;Região Marajó;Breves
+1501956;Cachoeira do Piriá;;Região Rio Caeté;Castanhal
+1502103;Cametá;;Região Tocantins;Belém
+1502152;Canaã dos Carajás;;Região Carajás;Marabá
+1502202;Capanema;;Região Rio Caeté;Castanhal
+1502301;Capitão Poço;;Região Rio Capim;Castanhal
+1502400;Castanhal;;Região Guamá;Castanhal
+1502509;Chaves;;Região Marajó;Breves
+1502608;Colares;;Região Guamá;Belém
+1502707;Conceição do Araguaia;;Região Araguaia;Redenção
+1502756;Concórdia do Pará;;Região Rio Capim;Belém
+1502764;Cumaru do Norte;;Região Araguaia;Redenção
+1502772;Curionópolis;;Região Carajás;Marabá
+1502806;Curralinho;;Região Marajó;Breves
+1502855;Curuá;;Região Baixo Amazonas;Santarém
+1502905;Curuçá;;Região Guamá;Castanhal
+1502939;Dom Eliseu;;Região Rio Capim;Castanhal
+1502954;Eldorado do Carajás;;Região Carajás;Marabá
+1503002;Faro;;Região Baixo Amazonas;Santarém
+1503044;Floresta do Araguaia;;Região Araguaia;Redenção
+1503077;Garrafão do Norte;;Região Rio Capim;Castanhal
+1503093;Goianésia do Pará;;Região Lago Tucuruí;Marabá
+1503101;Gurupá;;Região Marajó;Breves
+1503200;Igarapé-Açu;;Região Guamá;Castanhal
+1503309;Igarapé-Miri;;Região Tocantins;Belém
+1503408;Inhangapi;;Região Guamá;Castanhal
+1503457;Ipixuna do Pará;;Região Rio Capim;Castanhal
+1503507;Irituia;;Região Rio Capim;Castanhal
+1503606;Itaituba;;Região Tapajós;Santarém
+1503705;Itupiranga;;Região Lago Tucuruí;Marabá
+1503754;Jacareacanga;;Região Tapajós;Santarém
+1503804;Jacundá;;Região Lago Tucuruí;Marabá
+1503903;Juruti;;Região Baixo Amazonas;Santarém
+1504000;Limoeiro do Ajuru;;Região Tocantins;Belém
+1504059;Mãe do Rio;;Região Rio Capim;Castanhal
+1504109;Magalhães Barata;;Região Guamá;Castanhal
+1504208;Marabá;;Região Carajás;Marabá
+1504307;Maracanã;;Região Guamá;Castanhal
+1504406;Marapanim;;Região Guamá;Castanhal
+1504422;Marituba;;Região Guajará;Belém
+1504455;Medicilândia;;Região Xingu;Altamira
+1504505;Melgaço;;Região Marajó;Breves
+1504604;Mocajuba;;Região Tocantins;Belém
+1504703;Moju;;Região Tocantins;Belém
+1504752;Mojuí dos Campos;;Região Baixo Amazonas;Santarém
+1504802;Monte Alegre;;Região Baixo Amazonas;Santarém
+1504901;Muaná;;Região Marajó;Breves
+1504950;Nova Esperança do Piriá;;Região Rio Capim;Castanhal
+1504976;Nova Ipixuna;;Região Lago Tucuruí;Marabá
+1505007;Nova Timboteua;;Região Rio Caeté;Castanhal
+1505031;Novo Progresso;;Região Tapajós;Santarém
+1505064;Novo Repartimento;;Região Lago Tucuruí;Marabá
+1505106;Óbidos;;Região Baixo Amazonas;Santarém
+1505205;Oeiras do Pará;;Região Tocantins;Belém
+1505304;Oriximiná;;Região Baixo Amazonas;Santarém
+1505403;Ourém;;Região Rio Capim;Castanhal
+1505437;Ourilândia do Norte;;Região Araguaia;Redenção
+1505486;Pacajá;;Região Xingu;Marabá
+1505494;Palestina do Pará;;Região Carajás;Marabá
+1505502;Paragominas;;Região Rio Capim;Castanhal
+1505536;Parauapebas;;Região Carajás;Marabá
+1505551;Pau D'Arco;;Região Araguaia;Redenção
+1505601;Peixe-Boi;;Região Rio Caeté;Castanhal
+1505635;Piçarra;;Região Carajás;Marabá
+1505650;Placas;;Região Xingu;Santarém
+1505700;Ponta de Pedras;;Região Marajó;Breves
+1505809;Portel;;Região Marajó;Breves
+1505908;Porto de Moz;;Região Xingu;Altamira
+1506005;Prainha;;Região Baixo Amazonas;Santarém
+1506104;Primavera;;Região Rio Caeté;Castanhal
+1506112;Quatipuru;;Região Rio Caeté;Castanhal
+1506138;Redenção;;Região Araguaia;Redenção
+1506161;Rio Maria;;Região Araguaia;Redenção
+1506187;Rondon do Pará;;Região Rio Capim;Marabá
+1506195;Rurópolis;;Região Tapajós;Santarém
+1506203;Salinópolis;;Região Rio Caeté;Castanhal
+1506302;Salvaterra;;Região Marajó;Breves
+1506351;Santa Bárbara do Pará;;Região Guajará;Belém
+1506401;Santa Cruz do Arari;;Região Marajó;Breves
+1506500;Santa Izabel do Pará;;Região Guamá;Belém
+1506559;Santa Luzia do Pará;;Região Rio Caeté;Castanhal
+1506583;Santa Maria das Barreiras;;Região Araguaia;Redenção
+1506609;Santa Maria do Pará;;Região Guamá;Castanhal
+1506708;Santana do Araguaia;;Região Araguaia;Redenção
+1506807;Santarém;;Região Baixo Amazonas;Santarém
+1506906;Santarém Novo;;Região Rio Caeté;Castanhal
+1507003;Santo Antônio do Tauá;;Região Guamá;Belém
+1507102;São Caetano de Odivelas;;Região Guamá;Belém
+1507151;São Domingos do Araguaia;;Região Carajás;Marabá
+1507201;São Domingos do Capim;;Região Guamá;Castanhal
+1507300;São Félix do Xingu;;Região Araguaia;Redenção
+1507409;São Francisco do Pará;;Região Guamá;Castanhal
+1507458;São Geraldo do Araguaia;;Região Carajás;Marabá
+1507466;São João da Ponta;;Região Guamá;Castanhal
+1507474;São João de Pirabas;;Região Rio Caeté;Castanhal
+1507508;São João do Araguaia;;Região Carajás;Marabá
+1507607;São Miguel do Guamá;;Região Guamá;Castanhal
+1507706;São Sebastião da Boa Vista;;Região Marajó;Breves
+1507755;Sapucaia;;Região Araguaia;Redenção
+1507805;Senador José Porfírio;;Região Xingu;Altamira
+1507904;Soure;;Região Marajó;Breves
+1507953;Tailândia;;Região Tocantins;Belém
+1507961;Terra Alta;;Região Guamá;Castanhal
+1507979;Terra Santa;;Região Baixo Amazonas;Santarém
+1508001;Tomé-Açu;;Região Rio Capim;Belém
+1508035;Tracuateua;;Região Rio Caeté;Castanhal
+1508050;Trairão;;Região Tapajós;Santarém
+1508084;Tucumã;;Região Araguaia;Redenção
+1508100;Tucuruí;;Região Lago Tucuruí;Marabá
+1508126;Ulianópolis;;Região Rio Capim;Castanhal
+1508159;Uruará;;Região Xingu;Altamira
+1508209;Vigia;;Região Guamá;Belém
+1508308;Viseu;;Região Rio Caeté;Castanhal
+1508357;Vitória do Xingu;;Região Xingu;Altamira
+1508407;Xinguara;;Região Araguaia;Redenção

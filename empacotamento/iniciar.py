@@ -14,20 +14,19 @@ import webbrowser
 
 PASTA = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.join(PASTA, "app.py")
-# 8501 é a porta padrão de qualquer app Streamlit (ex.: outros sistemas da SIMD);
-# o AutoSIMD-FOCOS usa uma faixa própria para não disputar com eles
+NOME = "AutoSIMD-FOCOS"
+# Faixa própria: 8501 é o padrão de qualquer app Streamlit e o AutoSIMD-DESASTRE usa 8571–8620
 PORTA_PADRAO = 8521
 QTD_PORTAS = 50
 # IPv4 fixo: com "localhost" o Windows tenta IPv6 antes e cada falha custa ~2 s
 HOST = "127.0.0.1"
-# Arquivo servido pelo próprio servidor (static/) para reconhecer que a porta é do AutoSIMD-FOCOS
+# Arquivo servido pelo próprio servidor (static/) para reconhecer que a porta é deste sistema
 URL_IDENTIFICACAO = "http://127.0.0.1:{porta}/app/static/autosimd_focos.txt"
-IDENTIFICACAO = "AutoSIMD-FOCOS"
 # Sem proxy: em redes corporativas o proxy do Windows interceptaria até 127.0.0.1
 SEM_PROXY = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 TEMPO_MAX_INICIO_S = 180
-BAT = os.path.join(PASTA, "Iniciar_AutoSIMD-FOCOS.bat")
-ICONE = os.path.join(PASTA, "core", "logos", "AutoSIMD-FOCOS.ico")
+BAT = os.path.join(PASTA, f"Iniciar_{NOME}.bat")
+ICONE = os.path.join(PASTA, "referencia", "logos", "AutoSIMD-FOCOS.ico")
 MARCADOR_ATALHO = os.path.join(PASTA, ".atalho_criado")
 
 
@@ -47,7 +46,7 @@ def criar_atalho_area_de_trabalho():
 
     script = (
         "$d = [Environment]::GetFolderPath('Desktop');"
-        "$s = (New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path $d 'AutoSIMD-FOCOS.lnk'));"
+        f"$s = (New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path $d '{NOME}.lnk'));"
         f"$s.TargetPath = {ps(BAT)};"
         f"$s.WorkingDirectory = {ps(PASTA)};"
         f"$s.IconLocation = {ps(ICONE + ',0')};"
@@ -69,16 +68,16 @@ def criar_atalho_area_de_trabalho():
         if resultado.returncode == 0 and caminho_atalho and os.path.exists(caminho_atalho):
             with open(MARCADOR_ATALHO, "w", encoding="utf-8") as f:
                 f.write(PASTA)
-            print("Atalho 'AutoSIMD-FOCOS' criado na Área de Trabalho.")
+            print(f"Atalho '{NOME}' criado na Área de Trabalho.")
     except (OSError, subprocess.SubprocessError):
         pass  # o atalho é conveniência; o sistema abre normalmente sem ele
 
 
-def eh_autosimd(porta):
+def eh_este_sistema(porta):
     """True se a porta tem um servidor do AutoSIMD-FOCOS (e não outro app Streamlit)."""
     try:
         with SEM_PROXY.open(URL_IDENTIFICACAO.format(porta=porta), timeout=2) as resposta:
-            return resposta.read(64).decode("utf-8", "ignore").strip() == IDENTIFICACAO
+            return resposta.read(64).decode("utf-8", "ignore").strip() == NOME
     except (OSError, ValueError):
         return False
 
@@ -106,9 +105,9 @@ def main():
         if not porta_ocupada(p):
             porta = p  # primeira livre; para aqui
             break
-        if eh_autosimd(p):
+        if eh_este_sistema(p):
             # Já aberto em outra janela: só reabre o navegador na porta dele
-            print("O AutoSIMD-FOCOS já está em execução. Abrindo o navegador...")
+            print(f"O {NOME} já está em execução. Abrindo o navegador...")
             webbrowser.open(f"http://{HOST}:{p}")
             time.sleep(3)
             return 0
@@ -128,7 +127,7 @@ def main():
     )
 
     inicio = time.time()
-    while not (porta_ocupada(porta) and eh_autosimd(porta)):
+    while not (porta_ocupada(porta) and eh_este_sistema(porta)):
         if processo.poll() is not None:
             print("ERRO: o servidor foi encerrado durante a inicialização.")
             return processo.returncode or 1
@@ -141,7 +140,7 @@ def main():
     webbrowser.open(url)
     print()
     print("=" * 68)
-    print(f"  AutoSIMD-FOCOS aberto no navegador: {url}")
+    print(f"  {NOME} aberto no navegador: {url}")
     print("  Para ENCERRAR o sistema, feche esta janela.")
     print("=" * 68)
 

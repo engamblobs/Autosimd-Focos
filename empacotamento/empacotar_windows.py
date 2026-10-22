@@ -1,6 +1,6 @@
 """
 Monta o pacote Windows portátil do AutoSIMD-FOCOS em dist/AutoSIMD-FOCOS_v<versão>/
-e o compacta em dist/AutoSIMD-FOCOS_v<versão>.zip.
+e o compacta em dist/AutoSIMD-FOCOS_v<versão>.zip (mesmo padrão do AutoSIMD-DESASTRE).
 
 Uso (no Linux, com o env do projeto):
     /home/lobs/.local/share/venvs/fortracc2-env/bin/python3.14 empacotamento/empacotar_windows.py [--sem-zip]
@@ -17,26 +17,33 @@ from pathlib import Path
 
 PASTA_EMPACOTAMENTO = Path(__file__).resolve().parent
 PROJETO = PASTA_EMPACOTAMENTO.parent
+NOME = "AutoSIMD-FOCOS"
 PYTHON_EMBED_VERSAO = "3.13.15"
 PYTHON_EMBED = PROJETO / "python" / f"python-{PYTHON_EMBED_VERSAO}-embed-amd64"
 PYTHON_EMBED_URL = (
     f"https://www.python.org/ftp/python/{PYTHON_EMBED_VERSAO}/"
     f"python-{PYTHON_EMBED_VERSAO}-embed-amd64.zip"
 )
-BASES_ORIGEM = PROJETO / "BASES_GEOJSON"
 DIST = PROJETO / "dist"
+BASES_ORIGEM = PROJETO / "BASES_GEOJSON"
 
-# Somente as bases que o app.py usa
+# O que vai para o pacote (relativo ao projeto). Não vão: testes, amostras, docs, ferramentas.
+ARQUIVOS_APP = ["app.py"]
+PASTAS_APP = ["core", "referencia"]
+IGNORAR = shutil.ignore_patterns("__pycache__", "*.pyc", ".~lock.*#", "*~")
+# Somente as bases que o programa lê (core/config.py)
 BASES_USADAS = [
     "bdqueimadas_consolidado.parquet",
     "mun-brGEOJSON/NM_UF_*.geojson",
     "tiGEOJSON/TI-BR.geojson",
     "ucGEOJSON/UC-BR.geojson",
 ]
+# Vão se existirem: controle da atualização pelo INPE (dias provisórios são baixados de novo no Windows)
+BASES_OPCIONAIS = ["atualizacao_inpe.json"]
 
 
 def ler_versao():
-    codigo = (PROJETO / "app.py").read_text(encoding="utf-8")
+    codigo = (PROJETO / "core" / "config.py").read_text(encoding="utf-8")
     versao = re.search(r'^APP_VERSAO = "([^"]+)"', codigo, re.M).group(1)
     data = re.search(r'^APP_VERSAO_DATA = "([^"]+)"', codigo, re.M).group(1)
     return versao, data
@@ -57,8 +64,8 @@ def escrever_crlf(texto, destino):
     destino.write_bytes(texto.replace("\r\n", "\n").replace("\n", "\r\n").encode("utf-8"))
 
 
-def baixar_python_embed():
-    """Baixa o Python portátil oficial do Windows para python/ (cache local, fora do git)."""
+def obter_python_embed():
+    """Python portátil oficial do Windows em python/ (cache local, fora do git)."""
     if PYTHON_EMBED.exists():
         return
     print(f"→ Baixando Python portátil {PYTHON_EMBED_VERSAO} de python.org")
@@ -71,7 +78,7 @@ def baixar_python_embed():
 
 
 def montar_python(destino):
-    baixar_python_embed()
+    obter_python_embed()
     print("→ Python portátil")
     shutil.copytree(PYTHON_EMBED, destino)
     pth = next(destino.glob("python3*._pth"))
@@ -82,6 +89,9 @@ def montar_python(destino):
     ]
     if "Lib\\site-packages" not in linhas:
         linhas.insert(linhas.index(".") + 1, "Lib\\site-packages")
+    # a pasta do programa precisa estar no caminho para "import core" funcionar com o Python portátil
+    if ".." not in linhas:
+        linhas.insert(linhas.index(".") + 1, "..")
     pth.write_text("\r\n".join(linhas) + "\r\n")
 
     print("→ Pacotes Python para Windows (download de wheels win_amd64)")
@@ -132,40 +142,35 @@ def enxugar_site_packages(site_packages):
 
 
 def montar_app(destino, versao, data):
-    print("→ Aplicação e arquivos de inicialização")
-    copiar(PROJETO / "app.py", destino / "app.py")
-    copiar(
-        PROJETO / "core" / "dicionario_municipios-regioes.py",
-        destino / "core" / "dicionario_municipios-regioes.py",
-    )
-    for logo in ("AUTOSIMD-FOCOS.png", "CBM-CEDEC.png", "AutoSIMD-FOCOS.ico"):
-        copiar(PROJETO / "core" / "logos" / logo, destino / "core" / "logos" / logo)
+    print("→ Aplicação, tabelas de referência e arquivos de inicialização")
+    for nome in ARQUIVOS_APP:
+        copiar(PROJETO / nome, destino / nome)
+    for nome in PASTAS_APP:
+        shutil.copytree(PROJETO / nome, destino / nome, ignore=IGNORAR)
     copiar(PASTA_EMPACOTAMENTO / "iniciar.py", destino / "iniciar.py")
     copiar(PASTA_EMPACOTAMENTO / "config.toml", destino / ".streamlit" / "config.toml")
-    copiar(
-        PASTA_EMPACOTAMENTO / "static" / "autosimd_focos.txt",
-        destino / "static" / "autosimd_focos.txt",
+    copiar(PASTA_EMPACOTAMENTO / "static" / "autosimd_focos.txt", destino / "static" / "autosimd_focos.txt")
+    escrever_crlf(
+        (PASTA_EMPACOTAMENTO / f"Iniciar_{NOME}.bat").read_text(encoding="utf-8"),
+        destino / f"Iniciar_{NOME}.bat",
     )
     escrever_crlf(
-        (PASTA_EMPACOTAMENTO / "Iniciar_AutoSIMD-FOCOS.bat").read_text(encoding="utf-8"),
-        destino / "Iniciar_AutoSIMD-FOCOS.bat",
-    )
-    escrever_crlf(
-        (PASTA_EMPACOTAMENTO / "LEIA-ME.txt")
-        .read_text(encoding="utf-8")
-        .format(versao=f"v{versao}", data=data),
+        (PASTA_EMPACOTAMENTO / "LEIA-ME.txt").read_text(encoding="utf-8").format(versao=f"v{versao}", data=data),
         destino / "LEIA-ME.txt",
     )
 
 
-def montar_bases(destino):
+def montar_bases(destino, origem=BASES_ORIGEM):
     print("→ Bases de dados")
     for padrao in BASES_USADAS:
-        arquivos = sorted(BASES_ORIGEM.glob(padrao))
+        arquivos = sorted(Path(origem).glob(padrao))
         if not arquivos:
             sys.exit(f"ERRO: base não encontrada: BASES_GEOJSON/{padrao}")
         for arq in arquivos:
-            copiar(arq, destino / "BASES_GEOJSON" / arq.relative_to(BASES_ORIGEM))
+            copiar(arq, destino / "BASES_GEOJSON" / arq.relative_to(origem))
+    for nome in BASES_OPCIONAIS:
+        if (Path(origem) / nome).exists():
+            copiar(Path(origem) / nome, destino / "BASES_GEOJSON" / nome)
 
 
 def compactar(pasta):
@@ -197,8 +202,8 @@ def main():
     args = parser.parse_args()
 
     versao, data = ler_versao()
-    destino = DIST / f"AutoSIMD-FOCOS_v{versao}"
-    print(f"Empacotando AutoSIMD-FOCOS v{versao} ({data}) em {destino}")
+    destino = DIST / f"{NOME}_v{versao}"
+    print(f"Empacotando {NOME} v{versao} ({data}) em {destino}")
     if destino.exists():
         shutil.rmtree(destino)
     destino.mkdir(parents=True)

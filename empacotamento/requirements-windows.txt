@@ -1,5 +1,6 @@
 # Versões testadas no fortracc2-env (Linux) e instaladas no pacote Windows (cp313, win_amd64)
 streamlit==1.61.1
+altair==6.2.2
 pandas==3.0.3
 numpy==2.4.6
 pyarrow==23.0.1

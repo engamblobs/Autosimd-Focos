@@ -26,8 +26,22 @@ COMO ENCERRAR
 - Feche a janela preta. Fechar só o navegador deixa o sistema rodando;
   para voltar a ele, basta abrir o .bat de novo.
 
+FOCOS NOVOS (ATUALIZAÇÃO AUTOMÁTICA)
+- O sistema abre com a base que já tem e, em segundo plano, busca no servidor
+  do INPE os focos dos dias que faltam (precisa de internet) e os acrescenta à
+  pasta BASES_GEOJSON. Pode usar o sistema normalmente enquanto isso.
+- Ligue o "Nowcast" na barra lateral para buscar na hora e depois a cada 4
+  horas, enquanto o sistema estiver aberto.
+- O dia de hoje fica marcado como parcial: o INPE publica os focos ao longo
+  do dia, e ele é baixado de novo na próxima busca.
+- Sem internet, o sistema funciona normalmente com a base que já tem.
+- O mapa do cenário atual usa imagem de satélite Sentinel-2 (EOX), que também
+  precisa de internet; sem ela, o mapa sai sem a imagem de fundo.
+- Se a pasta do sistema não permitir gravação (ex.: dentro de "Arquivos de
+  Programas"), a atualização não acontece: extraia o sistema em uma pasta sua.
+
 ATUALIZAR AS BASES DE DADOS
-- As bases ficam na pasta BASES_GEOJSON. Para atualizar, substitua o arquivo
+- As bases ficam na pasta BASES_GEOJSON. Para trocar uma base inteira, substitua o arquivo
   mantendo exatamente o mesmo nome:
     BASES_GEOJSON\bdqueimadas_consolidado.parquet   (focos de calor)
     BASES_GEOJSON\mun-brGEOJSON\NM_UF_<Estado>.geojson  (municípios)

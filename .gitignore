@@ -1,4 +1,4 @@
-# Bases de dados (grandes; distribuídas no .zip da Release)
+# Bases de dados (grandes; distribuídas no .zip da Release). O recorte de amostras/bases é versionado.
 BASES_GEOJSON/
 
 # Pacote Windows gerado e Python portátil baixado pelo empacotamento
@@ -8,9 +8,12 @@ python/
 # Python
 __pycache__/
 *.pyc
+.pytest_cache/
 
 # Gerado pelo inicializador no Windows
 .atalho_criado
 
-# Backups de editores
+# Backups de bases gerados pelas ferramentas e backups de editores
+backup/
+.~lock.*#
 *~

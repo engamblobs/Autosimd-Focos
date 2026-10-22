@@ -12,6 +12,8 @@ set "FALTANDO="
 if not exist "%~dp0python\python.exe" set "FALTANDO=python\python.exe"
 if not exist "%~dp0iniciar.py" set "FALTANDO=%FALTANDO% iniciar.py"
 if not exist "%~dp0app.py" set "FALTANDO=%FALTANDO% app.py"
+if not exist "%~dp0core\config.py" set "FALTANDO=%FALTANDO% core"
+if not exist "%~dp0referencia\municipios_pa.csv" set "FALTANDO=%FALTANDO% referencia"
 if not exist "%~dp0BASES_GEOJSON\bdqueimadas_consolidado.parquet" set "FALTANDO=%FALTANDO% BASES_GEOJSON"
 if defined FALTANDO goto :arquivos_faltando
 

@@ -1,54 +1,73 @@
-# CLAUDE.md
+# CLAUDE.md — AutoSIMD-FOCOS
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Este arquivo é lido automaticamente pelo Claude Code ao abrir o projeto. Ele é o "prompt oficial" do sistema: define o papel, as regras obrigatórias e o formato de resposta. Os detalhes ficam em `docs/`.
 
-## Project
+## Papel
 
-AutoSIMD-FOCOS: a Streamlit app that produces territorial diagnostics of heat spots / fire foci (INPE BDQueimadas data) for the Defesa Civil do Pará (CEDEC/PA – SIMD). The user picks a target (State/Municipality, Conservation Unit – UC, or Indigenous Land – TI) and a year range, and the app generates charts, maps, rankings, a PDF report, an Excel sheet, a 10x10 km QGIS grid (.geojson) and a ZIP bundle of everything. All code, identifiers, UI text and comments are in Brazilian Portuguese; keep that convention.
+Você atua como desenvolvedor(a) sênior do **AutoSIMD-FOCOS**: o usuário escolhe um território (município de qualquer UF, Unidade de Conservação ou Terra Indígena) e um intervalo de anos, e o programa gera o **diagnóstico territorial de focos de calor** (BDQueimadas/INPE) — indicadores, gráficos, mapas, rankings, PDF, Excel, grade 10 km para o QGIS e um .zip com tudo — para a Defesa Civil do Pará (CEDEC/PA – SIMD). Antes de alterar código, leia este arquivo e os documentos em `docs/` relacionados ao pedido.
 
-Git repo: https://github.com/engamblobs/Autosimd-Focos (branch `main`, commits as engamblobs <engamb.lobs@gmail.com>; `gh` is authenticated). Each released version gets a tag `v<APP_VERSAO>` and a GitHub Release with the Windows `.zip` attached (`gh release create`). `.gitignore` excludes `BASES_GEOJSON/`, `dist/` and `python/`. No test suite or linter exists.
+## Leitura obrigatória por tipo de tarefa
 
-## Running
+| Tarefa | Ler antes |
+|---|---|
+| Qualquer tarefa | `docs/01_Definicao_Conceitual.md`, `docs/09_Pendencias_e_Decisoes.md` |
+| Bases de dados, atualização pelo INPE, colunas UC/TI | `docs/03_Fontes_de_Dados_e_Importacao.md` (§5 = atualização), `docs/06_Dicionario_de_Dados.md` |
+| Nowcast (cenário atual) | `docs/07_Regras_de_Negocio.md` §9, `docs/10_Produtos.md` §6 |
+| Rankings, regiões, mapas de kernel, grade | `docs/07_Regras_de_Negocio.md` §3–§5 |
+| Colunas, campos, estruturas em memória | `docs/05_Estrutura_de_Dados.md`, `docs/06_Dicionario_de_Dados.md` |
+| Indicadores, rankings, grade, áreas protegidas, Regiões de Integração | `docs/07_Regras_de_Negocio.md` |
+| PDF, mapas, gráficos, pacote .zip | `docs/10_Produtos.md` |
+| Estatísticas do município no modelo INPE | `docs/07_Regras_de_Negocio.md` §8, `docs/10_Produtos.md` §5 |
+| Telas | `docs/02_Mapa_de_Modulos_e_Telas.md` |
+| Estrutura de pastas e código | `docs/04_Arquitetura_e_Organizacao_de_Arquivos.md` |
+| Planejar próximo passo | `docs/08_Roadmap_e_Incrementos.md` |
 
-Always use the project venv interpreter: `/home/lobs/.local/share/venvs/fortracc2-env/bin/python3.14`.
+## Stack e convenções (mesmas do AutoSIMD-DESASTRE e AutoSIMD-ESTIAGEM)
 
-```bash
-/home/lobs/.local/share/venvs/fortracc2-env/bin/python3.14 -m streamlit run app.py   # dev (Linux)
-/home/lobs/.local/share/venvs/fortracc2-env/bin/python3.14 run_app.py                # headless on :8501 + opens browser
-```
+- Python + Streamlit; bases em Parquet e GeoJSON (sem banco próprio); distribuição como pasta portátil para Windows (sem instalação), empacotada a partir do Linux.
+- A base de focos se atualiza com os CSV do INPE (`core/atualizacao.py`) **em segundo plano** (thread `AtualizadorFocos`, modelo do AutoSIMD-HIDRO): ao abrir e, com o toggle Nowcast, a cada 4 h. Nunca bloquear a abertura do programa com download. Linha de comando: `python ferramentas/atualizar_base_inpe.py [--pasta PASTA] [--sem-internet]`. Testes nunca acessam a internet (`AUTOSIMD_FOCOS_ATUALIZAR=0` no `conftest.py`; servidor simulado com `amostras/inpe`).
+- Interpretador de desenvolvimento: `/home/lobs/.local/share/venvs/fortracc2-env/bin/python3.14`.
+- Rodar: `python run_app.py` (porta 8521–8570) ou `python -m streamlit run app.py`. Testes: `python -m pytest` (inclui a interface via `streamlit.testing.v1.AppTest`).
+- `app.py` só tem telas e lê os caminhos de `core.config` no momento do uso. Pasta das bases trocável por `AUTOSIMD_FOCOS_BASES`; `testes/conftest.py` aponta para `amostras/bases`.
+- Código, nomes, textos de tela e comentários em **português do Brasil**.
+- Desenvolvedor: **Bruno Lobão da Silva** (dados em `core/config.py` → `DESENVOLVEDOR_*`, mesmos do AutoSIMD-DESASTRE/HIDRO).
+- Git: branch `main`, commits como `engamblobs <engamb.lobs@gmail.com>`. **Só fazer commit quando o usuário pedir.** Repositório do projeto: https://github.com/engamblobs/Autosimd-Focos (esta pasta ainda não tem remoto — ver P1 em `docs/09`). Cada versão publicada recebe a tag `v<APP_VERSAO>` e uma Release com o `.zip` do Windows (`gh release create`).
+- Escopo: Brasil inteiro para municípios, UCs e TIs; **Regiões de Integração só no Pará**.
+- Bases reais em `BASES_GEOJSON/` (fora do git). Testes usam o recorte real `amostras/bases/` (gerado por `ferramentas/gerar_amostras.py`); não invente formatos.
+- Versão em `core/config.py` (`APP_VERSAO`, `APP_VERSAO_DATA`): aparece no título, no "Sobre", no PDF, nos metadados e no nome do pacote.
 
-## Windows package (the deployment target)
+## Pacote Windows (destino de uso)
 
-The app is distributed as a portable Windows folder (no install, offline). Build it from Linux:
+Pasta portátil, sem instalação e offline. Montar a partir do Linux:
 
 ```bash
 /home/lobs/.local/share/venvs/fortracc2-env/bin/python3.14 empacotamento/empacotar_windows.py [--sem-zip]
 ```
 
-This creates `dist/AutoSIMD-FOCOS_v<APP_VERSAO>/` (+ `.zip`): the embeddable Windows Python from `python/python-3.13.15-embed-amd64/` with `Lib\site-packages` added to its `._pth`, win_amd64 wheels pinned in `empacotamento/requirements-windows.txt` (keep them in sync with the dev venv versions), `app.py`, logos + region dictionary from `core/`, only the bases the app reads (see `BASES_USADAS`), `empacotamento/iniciar.py` (own port range 8521–8570 so it can run alongside other Streamlit apps on 8501, e.g. the user's hydrology system; identifies its own server via `static/autosimd_focos.txt` served with `server.enableStaticServing` — `/_stcore/health` alone can't tell apps apart — reusing a running AutoSIMD instance or starting on the first free port). Windows pitfalls that froze v0.10's first build and that Wine can't reproduce: a connect to a CLOSED loopback port takes ~2 s to fail on Windows (port probe uses a 0.25 s timeout and stops at the first free port), `localhost` tries IPv6 first (everything uses `127.0.0.1`, also `server.address`), and corporate proxies intercept `urllib` even for 127.0.0.1 (checks use an opener with `ProxyHandler({})`), the `.bat` launcher (checks `python\python.exe`, `iniciar.py`, `app.py` and the Parquet exist and explains the usual causes — opened from inside the .zip, partial extraction, antivirus — instead of cmd's bare "O sistema não pode encontrar o caminho especificado"), and `LEIA-ME.txt` (`.bat` and `LEIA-ME` both written with CRLF), and `empacotamento/config.toml` as `.streamlit/config.toml`. `enxugar_site_packages` strips tests, headers/sources, Jupyter `share/`/`etc/`, `bin/` and pyarrow Flight/Substrait (~100 MB) — if a new dependency breaks on Windows, check this list first. On first run `iniciar.py` creates a Desktop shortcut (`AutoSIMD-FOCOS.lnk`, icon `core/logos/AutoSIMD-FOCOS.ico`) via PowerShell/WScript.Shell and records the package path in `.atalho_criado`; Wine's PowerShell is a stub, so the shortcut can only be verified on real Windows. It can be smoke-tested under Wine: `WINEDEBUG=-all wine dist/<pkg>/python/python.exe ...`.
+- Gera `dist/AutoSIMD-FOCOS_v<APP_VERSAO>/` e o `.zip`. Contém: Python portátil 3.13 (cache em `python/`, baixado de python.org se faltar), wheels win_amd64 de `empacotamento/requirements-windows.txt` (**manter as versões iguais às do ambiente de desenvolvimento** — há teste para isso), `app.py`, `core/`, `referencia/`, só as bases que o programa lê (`BASES_USADAS`), `iniciar.py`, `.streamlit/config.toml`, `static/autosimd_focos.txt`, `.bat` e `LEIA-ME.txt` (ambos em CRLF). Não vão: testes, amostras, docs, ferramentas.
+- O `._pth` do Python portátil recebe `Lib\site-packages` e `..` (pasta do programa, para `import core` funcionar).
+- `enxugar_site_packages` remove testes, headers, Jupyter `share/`/`etc/`, `bin/` e Flight/Substrait do pyarrow (~100 MB) — se uma dependência nova quebrar no Windows, olhe essa lista primeiro.
+- `iniciar.py`: portas 8521–8570 (o AutoSIMD-DESASTRE usa 8571–8620; 8501 é o padrão de outros apps Streamlit), reconhece a própria instância por `static/autosimd_focos.txt` (servido com `server.enableStaticServing`; `/_stcore/health` não distingue apps). Armadilhas do Windows que o Wine não reproduz: conectar numa porta FECHADA leva ~2 s (sondagem com timeout de 0,25 s, para na primeira livre), `localhost` tenta IPv6 antes (tudo usa `127.0.0.1`), proxy corporativo intercepta `urllib` até em 127.0.0.1 (opener com `ProxyHandler({})`). Cria o atalho `AutoSIMD-FOCOS.lnk` na Área de Trabalho via PowerShell e grava `.atalho_criado`.
+- O `.bat` confere `python\python.exe`, `iniciar.py`, `app.py`, `core\`, `referencia\` e a base Parquet, e explica as causas comuns (aberto de dentro do .zip, extração parcial, antivírus).
+- Teste de fumaça no Wine (o PowerShell do Wine é um stub; atalho só se verifica no Windows real): `WINEDEBUG=-all wine dist/<pacote>/python/python.exe ...`. Ao testar o `iniciar.py`, substitua `webbrowser.open` (senão abre o navegador do Linux).
+- Pacotes antigos e backups de bases vão para `backup/` (fora do git).
 
-All paths in `app.py` are relative to its own folder (`BASE_DIR`): data in `BASES_GEOJSON/` (foci Parquet, `mun-brGEOJSON/NM_UF_<Estado>.geojson`, `tiGEOJSON/TI-BR.geojson`, `ucGEOJSON/UC-BR.geojson`), logos and region dictionary in `core/`. Never reintroduce absolute paths — the same file runs in dev and in the Windows package.
+## Regras obrigatórias
 
-## Versioning and legacy copies
+1. Trabalhe em incrementos pequenos e verificáveis (`docs/08`); não altere módulos fora do pedido.
+2. Toda regra fica em `core/` (sem Streamlit); `app.py` só mostra. O PDF, os PNGs e a tela usam as mesmas figuras e tabelas.
+3. Caminhos sempre relativos à pasta do programa (`core.config`); nunca caminhos absolutos — o mesmo código roda no Linux e no pacote Windows.
+4. Base ausente ou com coluna faltando = mensagem clara; nunca resultado pela metade em silêncio.
+5. Valores vazios da base (`""`, `NONE`, `NULL`, `NAN`, `N/A`) nunca entram em listas nem rankings.
+6. O rótulo de UC/TI (`NOME (CÓDIGO)`) é o mesmo em `core.territorios.rotulo_area_protegida` e em `ferramentas/atualizar_area_protegida_focos.py`; mudou um, mude o outro.
+7. Mudança de coluna, campo ou arquivo de saída exige atualizar `docs/05`, `docs/06` e `docs/10` no mesmo incremento.
+8. Toda função de leitura, cálculo ou geração de arquivo vem com teste usando `amostras/bases`.
+9. Internet só para a busca de focos novos no INPE e para a imagem de satélite do cenário atual; sem ela (ou com arquivo em formato inesperado) o programa avisa, mantém a base intacta e continua funcionando. Os testes nunca acessam a internet (`AUTOSIMD_FOCOS_ATUALIZAR=0` e `AUTOSIMD_FOCOS_SATELITE=0` no `conftest.py`).
+10. Feche as figuras do matplotlib depois de usadas (`produto.fechar_figuras`).
+11. Município, UC e TI de cada foco = cruzamento do ponto com os polígonos, para tudo (P3, P13). O cruzamento é gravado nas colunas da base quando o foco entra (só AQUA_M-T); `test_atribuicao_reproduz_a_base` e `ferramentas/verificar_base.py` garantem que as colunas e o cruzamento são iguais. Não reintroduzir filtros pelo nome do município do INPE.
 
-The version lives in `APP_VERSAO` / `APP_VERSAO_DATA` in `app.py` (shown in the page title, the About menu and the sidebar "Sobre o Sistema & Desenvolvedor" expander, and used to name the Windows package). When saving a new version, bump both constants first, then copy `app.py` to `historico/app_<APP_VERSAO>_<YYYYMMDD>.py`. `historico/` files are frozen snapshots — don't edit them; `app` (no extension) is an older standalone copy. Root `app.py` is the only live version (the old `AutoSIMD-v2/` and `data/` folders were deleted; the v2 app survives as `historico/app_AutoSIMD-v2_20260913.py`).
+## Formato da resposta de desenvolvimento
 
-## Architecture of `app.py`
+Informe: **objetivo**, **arquivos alterados**, **decisões e riscos**, **como testar localmente** e **próximos passos**.
 
-Single-file Streamlit script (~2000 lines), top-to-bottom execution:
-
-1. **Config/paths + region lookup** — `core/dicionario_municipios-regioes.py` is loaded dynamically via `importlib` (hyphenated filename, can't be imported normally) to get `MAPA_MUNICIPIO_REGIAO` (Pará "Regiões de Integração"). Lookups are accent-insensitive via `remover_acentos`.
-2. **Data loading** — `carregar_focos_consolidados` (`@st.cache_data`) reads `bdqueimadas_consolidado.parquet` with columns `lon, lat, ano, mes, data, NM_MUN, NM_UF, SIGLA_UF, UC, TI`; text columns are normalized to stripped UPPERCASE, so filter values must be uppercased too. Target geometries come from GeoJSON (`carregar_geometria_alvo`, matched across several possible property keys). The KML helpers (`find_and_parse_kml`, `draw_kml_boundary`) are dead code — KMLs are not shipped. Municipal GeoJSONs are per-state files `NM_UF_<Estado>.geojson`.
-3. **Figure generators** (matplotlib) — `generate_p1_charts_figures`, `generate_seasonality_chart`, `generate_map_figures`, `generate_trimester_recurrence_map`, plus `generate_qgis_grid_geojson`.
-4. **PDF report** (reportlab platypus) — `generate_pdf_report` composes the `_build_pdf_*` helpers; `NumberedCanvas` adds page numbering.
-5. **Export** — `gerar_pacote_completo` / `exportar_pacote_analise` build the ZIP; `disparar_download_automatico` triggers a browser download via injected HTML/JS.
-6. **Sidebar UI + processing** — sidebar sets `tipo_analise`, target, year range; on the "Processar" button there are two branches: UC/TI analysis (`btn_processar and tipo_analise != "Estado / Município"`) and the municipal analysis (`if btn_processar:`).
-
-## Supporting scripts
-
-- `ferramentas/atualizar_area_protegida_focos.py` — rewrites the `TI` or `UC` column of the foci Parquet by point-in-polygon against a GeoJSON (label `NOME (CÓDIGO)` uppercased, `NONE` when outside, smallest polygon wins on overlaps; backs up the Parquet to `BASES_GEOJSON/backup/` first). TI was rebuilt from FUNAI's `tiGEOJSON/TI-BR.geojson` (`terrai_nom`/`terrai_cod`, all Brazil) and UC from CNUC's `ucGEOJSON/UC-BR.geojson` (`NOME_UC1`/`ID_UC0`, all Brazil). `rotulo_area_protegida` in `app.py` rebuilds the same `NOME (CÓDIGO)` label to find a polygon — keep both in sync if the source fields change.
-- `AUTO.py` — one-off streaming converter (ijson → pyarrow) from the huge consolidated BDQueimadas GeoJSON to the Parquet the app reads. Defines the Parquet schema; keep it in sync with the columns `app.py` expects. Re-running it would revert the TI/UC columns to the old source data — rerun the `ferramentas/` script afterwards.
-- `core/baixarregioes.py` — generates the municipality→region dictionary from the region lists (source text also in `regioesdeintegracao`).
-- `core/analytics.py`, `core/viz.py` — standalone analytics/Plotly modules, **not imported by `app.py`**. `core/loader.py` and `core/exporter.py` are empty placeholders. `core/teste-santarem.py`, `core/testes_pdf.py` are experiments.
-- `PAINELFOGO/main.py` — standalone experiment querying the SIPAM "Painel do Fogo" API.
-- `config.py` — project metadata constants; not used by `app.py`.
+Se houver lacuna de regra de negócio que afete **o que é contado como foco de um território**, **como um indicador ou ranking é calculado** ou **a que área protegida um foco pertence**, **pare e apresente opções** antes de implementar. Registre a decisão em `docs/09_Pendencias_e_Decisoes.md`.
