@@ -2,7 +2,7 @@
 """Mapas do diagnóstico (docs/10 §3): densidade de kernel, recorrência, migração trimestral e cenário atual.
 
 Mapas 1, 2 e 4: densidade de kernel dos focos (``core/kernel.py``) com cada foco marcado por uma
-pequena cruz preta. Mapa 3: recorrência na grade de 10 km ajustada à latitude (``core/grade.py``).
+pequena cruz preta. Mapa 3: recorrência na grade proporcional ao território, ajustada à latitude (``core/grade.py``).
 Todos desenham o limite oficial do território (IBGE, CNUC ou FUNAI). Quem chama fecha as figuras.
 """
 
@@ -16,11 +16,11 @@ from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402
 from matplotlib.ticker import FuncFormatter  # noqa: E402
 
-from core.config import KERNEL_MAX_CRUZES  # noqa: E402
+from core.config import KERNEL_MAX_CRUZES, TAMANHO_CELULA_KM  # noqa: E402
 from core.fundo_satelite import (  # noqa: E402
     CREDITO_SATELITE, lonlat_para_mercator, mercator_para_lat, mercator_para_lon, mosaico,
 )
-from core.grade import Grade, grade_do_territorio, nota_grade, recorrencia  # noqa: E402
+from core.grade import Grade, fmt_km, grade_do_territorio, nota_grade, recorrencia  # noqa: E402
 from core.kernel import densidade_kernel  # noqa: E402
 from core.territorios import CORES_AREAS_PROTEGIDAS, poligonos_de  # noqa: E402
 from core.texto import fmt_inteiro, fmt_numero  # noqa: E402
@@ -89,8 +89,9 @@ def _kernel(ax, fig, focos, poligono, limites, encolher: float = 0.8):
     return k
 
 
-def _nota(fig, texto: str):
-    fig.text(0.01, 0.005, texto, fontsize=6.5, color="#555555", ha="left", va="bottom", wrap=True)
+def _nota(fig, texto: str, centro: bool = False):
+    fig.text(0.5 if centro else 0.01, 0.005, texto, fontsize=6.5, color="#555555", ha="center" if centro else "left",
+             va="bottom", wrap=True)
 
 
 def _texto_kernel(k) -> str:
@@ -181,7 +182,7 @@ def mapa_densidade(focos, poligono, nome: str, ano_inicio: int, ano_fim: int):
 
 
 def mapa_recorrencia(focos, poligono, ano_inicio: int, ano_fim: int):
-    """Mapa 3: em quantos anos do período cada célula de 10 km teve fogo."""
+    """Mapa 3: em quantos anos do período cada célula da grade (proporcional ao território) teve fogo."""
     fig, ax = plt.subplots(figsize=(9, 7), dpi=180)
     _acabamento(ax)
     limites = desenhar_limite(ax, poligono)
@@ -192,7 +193,9 @@ def mapa_recorrencia(focos, poligono, ano_inicio: int, ano_fim: int):
                         "Nº de Anos com Reincidência")
     else:
         _sem_dados(ax, f"Sem focos em {ano_inicio}-{ano_fim}")
-    ax.set_title(f"3. Recorrência Temporal dos Focos ({ano_inicio}-{ano_fim}) — Grade 10 km × 10 km",
+    km = fmt_km(grade.tamanho_km if grade is not None else
+                grade_do_territorio(limites).tamanho_km if limites else TAMANHO_CELULA_KM)
+    ax.set_title(f"3. Recorrência Temporal dos Focos ({ano_inicio}-{ano_fim}) — Grade {km} × {km} km",
                  fontsize=11, fontweight="bold")
     fig.tight_layout(rect=(0, 0.04, 1, 1))
     if grade is not None:
@@ -280,8 +283,9 @@ def mapa_recentes(recentes, poligono, nome: str, ultimo_dia, dias: int, areas: l
         if selecao.any():
             ax.scatter(px[selecao], py[selecao], c=cor, s=26, edgecolors="black", linewidths=0.5, zorder=6 + i,
                        label=f"{idade} ({fmt_inteiro(int(selecao.sum()))})")
-    if len(recentes):
-        ax.legend(loc="best", fontsize=7, framealpha=0.9, title="Idade do foco", title_fontsize=7)
+    if len(recentes):                    # legenda centralizada abaixo do mapa (não cobre focos)
+        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=4, fontsize=7, frameon=False,
+                  title="Idade do foco", title_fontsize=7)
     else:
         _sem_dados(ax, f"Sem focos nos últimos {dias} dias")
     ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{mercator_para_lon(v):.1f}"))
@@ -291,5 +295,31 @@ def mapa_recentes(recentes, poligono, nome: str, ultimo_dia, dias: int, areas: l
                  fontsize=11, fontweight="bold")
     fig.tight_layout(rect=(0, 0.03, 1, 1))
     _nota(fig, CREDITO_SATELITE if imagem is not None else
-          "Imagem de satélite indisponível (sem conexão com a internet).")
+          "Imagem de satélite indisponível (sem conexão com a internet).", centro=True)
+    return fig
+
+
+MESES_NOME = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro",
+              "novembro", "dezembro"]
+
+
+def mapa_recorrencia_mes(rec, poligono, nome: str, dia):
+    """Recorrência dos focos no mês (grade proporcional) com os focos da última semana por cima (PDF do cenário)."""
+    fig, ax = plt.subplots(figsize=(9, 7), dpi=150)
+    _acabamento(ax)
+    desenhar_limite(ax, poligono)
+    periodo = f"{rec.anos[0]}–{rec.anos[-1]}" if rec.anos else "sem anos anteriores"
+    if rec.matriz.any():
+        _grade_colorida(ax, rec.grade, rec.matriz, "YlOrRd", fig, f"Anos com foco em {MESES_NOME[rec.mes - 1]}")
+    if len(rec.atuais):
+        ax.scatter(rec.atuais["lon"], rec.atuais["lat"], s=10, c="#0D47A1", edgecolors="white", linewidths=0.4,
+                   zorder=6, label=f"Focos da última semana ({fmt_inteiro(len(rec.atuais))})")
+        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.06), fontsize=7, frameon=False)
+    elif not rec.matriz.any():
+        _sem_dados(ax, f"Sem focos em {MESES_NOME[rec.mes - 1]}")
+    km = fmt_km(rec.grade.tamanho_km)
+    ax.set_title(f"Recorrência em {MESES_NOME[rec.mes - 1]} ({periodo}) × focos até {dia:%d/%m/%Y} — {nome}\n"
+                 f"Grade {km} × {km} km", fontsize=10, fontweight="bold")
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    _nota(fig, nota_grade(rec.grade), centro=True)
     return fig

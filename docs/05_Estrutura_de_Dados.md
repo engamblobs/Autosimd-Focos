@@ -20,7 +20,9 @@ O AutoSIMD-FOCOS **não tem banco de dados próprio**: lê as bases de `BASES_GE
 | `DiagnosticoArea` | Tipo (UC/TI), rótulo, polígono, focos da área no período, séries anual e mensal |
 | `produto.Pacote` | Nome do .zip, bytes do .zip e do PDF |
 | `estatisticas.EstatisticasMunicipio` | Tabelas e séries no modelo INPE (`docs/07` §8) |
-| `nowcast.Nowcast` | Últimos 30 dias do município, comparação com o mesmo dia dos anos anteriores, focos recentes (`docs/07` §9) |
+| `nowcast.Nowcast` | Últimos 30 dias do município, comparação com o mesmo dia dos anos anteriores, focos recentes; `semanal` = últimas 52 semanas (`inicio`, `fim`, `focos`, `media`, `maximo`) (`docs/07` §9) |
+| `cenario.CenarioAtual` | Cenário do estado/região: dia da passagem, focos das 24 h e da semana, municípios, UCs/TIs, nowcast; `historico_mes` = focos (`lon`, `lat`, `ano`) do mês da passagem nos anos comparados (`docs/07` §11) |
+| `cenario.RecorrenciaDoMes` | Grade proporcional, nº de anos com foco no mês por célula e os focos da semana com a recorrência da célula onde caíram (`docs/07` §11) |
 | `atualizacao.ResultadoAtualizacao` | Situação da busca no INPE, focos novos, dias, provisórios |
 
 ## 3. Regras

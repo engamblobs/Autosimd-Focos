@@ -5,8 +5,8 @@ import os
 from pathlib import Path
 
 APP_NOME = "AutoSIMD-FOCOS"
-APP_VERSAO = "0.11"
-APP_VERSAO_DATA = "22/10/2026"
+APP_VERSAO = "0.12"
+APP_VERSAO_DATA = "29/10/2026"
 REPOSITORIO = "https://github.com/engamblobs/Autosimd-Focos"
 
 # Faixa de portas própria (8501 é o padrão do Streamlit; o AutoSIMD-DESASTRE usa 8571–8620)
@@ -93,6 +93,11 @@ SIGLA_TIPO = {TIPO_MUNICIPIO: "MUN", TIPO_UC: "UC", TIPO_TI: "TI"}
 UF_REGIOES_INTEGRACAO = "PA"              # Regiões de Integração só existem no Pará
 VALORES_VAZIOS = {"", "NONE", "NULL", "NAN", "N/A"}
 TAMANHO_CELULA_KM = 10            # grade ajustada à latitude (core/grade.py, P8)
+# Grade proporcional ao território (core/grade.py): célula = 10 km ÷ divisor, escolhida para o lado maior ter
+# perto de GRADE_CELULAS_LADO_MAIOR células — as de São Félix do Xingu-PA (511 km) com 10 km, o resultado ideal.
+# Divisor máximo 8 (1,25 km): pouco acima do pixel de ~1 km do MODIS, abaixo disso a grade não acrescenta nada.
+GRADE_CELULAS_LADO_MAIOR = 51
+GRADE_DIVISORES = (1, 2, 4, 8)
 # Frações mínimas de sobreposição para descartar "lascas" de borda entre limites que só se tocam
 # (relativas à área protegida e ao território analisado)
 LIMIAR_SOBREPOSICAO_AREA = 0.02

@@ -55,3 +55,12 @@ def fmt_milhar_eixo(x, _pos=None) -> str:
         mil = x / 1000
         return f"{int(mil)} mil" if float(mil).is_integer() else f"{mil:.1f} mil".replace(".", ",")
     return f"{int(x)}"
+
+
+def neutralizar_formulas(livro) -> None:
+    """Grava como texto as células que o openpyxl tomaria por fórmula (texto dos dados que começa com "=")."""
+    for aba in livro.worksheets:
+        for linha in aba.iter_rows():
+            for celula in linha:
+                if celula.data_type == "f":
+                    celula.data_type = "s"

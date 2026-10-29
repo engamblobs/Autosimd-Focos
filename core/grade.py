@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Grade regular de 10 km × 10 km (docs/07 §4): contagem, recorrência e GeoJSON para o QGIS.
+"""Grade regular proporcional ao território (docs/07 §4): contagem, recorrência e GeoJSON para o QGIS.
+
+A célula é 10 km dividido por 1, 2, 4 ou 8 (10, 5, 2,5 ou 1,25 km): a que deixa o lado maior do território
+com o número de células mais próximo do de São Félix do Xingu-PA com 10 km (``GRADE_CELULAS_LADO_MAIOR``).
+Assim municípios pequenos (Maracanã-PA, 50 km) não ficam com meia dúzia de células enormes.
 
 A grade é **ajustada à latitude do território** (P8): 10 km em latitude são sempre ~0,090°, mas 10 km
 em longitude são 0,090° no Equador e 0,104° em −30° (Rio Grande do Sul). Com o ajuste, toda célula
@@ -13,7 +17,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from core.config import TAMANHO_CELULA_KM
+from core.config import GRADE_CELULAS_LADO_MAIOR, GRADE_DIVISORES, TAMANHO_CELULA_KM
 from core.kernel import KM_POR_GRAU_LAT, KM_POR_GRAU_LON_EQUADOR
 from core.texto import fmt_numero
 
@@ -23,6 +27,7 @@ class Grade:
     x: np.ndarray            # bordas em longitude
     y: np.ndarray            # bordas em latitude
     latitude_ref: float = 0.0
+    tamanho_km: float = TAMANHO_CELULA_KM
 
     @property
     def forma(self) -> tuple[int, int]:
@@ -43,9 +48,27 @@ def passos_em_graus(latitude: float, tamanho_km: float = TAMANHO_CELULA_KM) -> t
             tamanho_km / KM_POR_GRAU_LAT)
 
 
-def grade_do_territorio(limites: tuple[float, float, float, float],
-                        tamanho_km: float = TAMANHO_CELULA_KM) -> Grade:
-    """``limites`` = (min_x, min_y, max_x, max_y), como ``geometria.bounds``."""
+def lado_maior_km(limites: tuple[float, float, float, float]) -> float:
+    min_x, min_y, max_x, max_y = limites
+    cos_lat = math.cos(math.radians((min_y + max_y) / 2))
+    return max((max_x - min_x) * KM_POR_GRAU_LON_EQUADOR * cos_lat, (max_y - min_y) * KM_POR_GRAU_LAT)
+
+
+def tamanho_da_celula(limites: tuple[float, float, float, float]) -> float:
+    """10 km ÷ divisor mais próximo (em escala logarítmica) do lado maior ÷ ``GRADE_CELULAS_LADO_MAIOR``."""
+    ideal = max(lado_maior_km(limites), 1e-6) / GRADE_CELULAS_LADO_MAIOR
+    return min((TAMANHO_CELULA_KM / d for d in GRADE_DIVISORES), key=lambda km: abs(math.log(km / ideal)))
+
+
+def fmt_km(valor: float) -> str:
+    """10 → "10"; 2.5 → "2,5"; 1.25 → "1,25"."""
+    return fmt_numero(valor, 2).rstrip("0").rstrip(",")
+
+
+def grade_do_territorio(limites: tuple[float, float, float, float], tamanho_km: float | None = None) -> Grade:
+    """``limites`` = (min_x, min_y, max_x, max_y), como ``geometria.bounds``; sem ``tamanho_km``, a célula
+    proporcional ao território (``tamanho_da_celula``)."""
+    tamanho_km = tamanho_km or tamanho_da_celula(limites)
     min_x, min_y, max_x, max_y = limites
     latitude = (min_y + max_y) / 2
     passo_x, passo_y = passos_em_graus(latitude, tamanho_km)
@@ -53,15 +76,20 @@ def grade_do_territorio(limites: tuple[float, float, float, float],
         np.arange(min_x - passo_x, max_x + 2 * passo_x, passo_x),
         np.arange(min_y - passo_y, max_y + 2 * passo_y, passo_y),
         latitude,
+        tamanho_km,
     )
 
 
 def nota_grade(grade: Grade) -> str:
-    """Observação sobre o ajuste da grade (mapas e relatórios, P8)."""
-    return (f"Grade de {TAMANHO_CELULA_KM} km × {TAMANHO_CELULA_KM} km ajustada à latitude do território "
+    """Observação sobre o tamanho e o ajuste da grade (mapas e relatórios, P8)."""
+    km = fmt_km(grade.tamanho_km)
+    proporcional = ("" if grade.tamanho_km == TAMANHO_CELULA_KM else
+                    f" (10 km ÷ {round(TAMANHO_CELULA_KM / grade.tamanho_km)}, proporcional ao tamanho do território)")
+    return (f"Grade de {km} km × {km} km{proporcional} ajustada à latitude do território "
             f"({fmt_numero(grade.latitude_ref, 1)}°): {fmt_numero(grade.passo_y, 3)}° de latitude × "
             f"{fmt_numero(grade.passo_x, 3)}° de longitude, para que todas as células tenham a mesma área "
-            f"(~{TAMANHO_CELULA_KM ** 2} km²) em qualquer parte do país e as contagens sejam comparáveis.")
+            f"(~{fmt_km(grade.tamanho_km ** 2)} km²) em qualquer parte do território.")
+
 
 
 def contagem(grade: Grade, lons, lats) -> np.ndarray:
@@ -69,6 +97,16 @@ def contagem(grade: Grade, lons, lats) -> np.ndarray:
     if len(lons) == 0:
         return np.zeros(grade.forma)
     valores, _, _ = np.histogram2d(np.asarray(lons), np.asarray(lats), bins=[grade.x, grade.y])
+    return valores
+
+
+def valor_na_celula(grade: Grade, matriz: np.ndarray, lons, lats) -> np.ndarray:
+    """Valor da ``matriz`` [x, y] na célula de cada ponto (0 fora da grade)."""
+    lons, lats = np.asarray(lons, dtype=float), np.asarray(lats, dtype=float)
+    i, j = np.searchsorted(grade.x, lons, side="right") - 1, np.searchsorted(grade.y, lats, side="right") - 1
+    dentro = (i >= 0) & (i < matriz.shape[0]) & (j >= 0) & (j < matriz.shape[1])
+    valores = np.zeros(len(lons))
+    valores[dentro] = matriz[i[dentro], j[dentro]]
     return valores
 
 
@@ -82,7 +120,7 @@ def recorrencia(grade: Grade, lons, lats, anos) -> np.ndarray:
     return matriz
 
 
-def grade_qgis(focos: pd.DataFrame, poligono=None, tamanho_km: float = TAMANHO_CELULA_KM) -> dict:
+def grade_qgis(focos: pd.DataFrame, poligono=None, tamanho_km: float | None = None) -> dict:
     """FeatureCollection com as células que têm focos: ``cell_id``, ``focos_acumulados``, ``recorrencia_anos``.
 
     Limites = polígono do território; sem polígono, a extensão dos próprios focos.
@@ -108,7 +146,7 @@ def grade_qgis(focos: pd.DataFrame, poligono=None, tamanho_km: float = TAMANHO_C
             "geometry": {"type": "Polygon",
                          "coordinates": [[[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]]},
         })
-    return {**vazia, "descricao": nota_grade(grade), "features": feicoes}
+    return {**vazia, "descricao": nota_grade(grade), "tamanho_celula_km": grade.tamanho_km, "features": feicoes}
 
 
 # ------------------------------------------------- Risco de recorrência (KML)
@@ -186,7 +224,7 @@ def kml_risco(classe: dict, territorio: str, periodo: str, quartis, nota: str, a
         criterio = "Sem focos no período."
     else:
         q = [fmt_numero(v, 2) for v in quartis]
-        criterio = (f"Quartis da recorrência (anos com fogo por célula de 10 km, só células com foco): "
+        criterio = (f"Quartis da recorrência (anos com fogo por célula da grade, só células com foco): "
                     f"Q1 = {q[0]}, Q2 = {q[1]}, Q3 = {q[2]}. Baixo ≤ Q1 &lt; Moderado ≤ Q2 &lt; Alto ≤ Q3 &lt; "
                     f"Muito alto.")
     if classe["geometria"] is None:

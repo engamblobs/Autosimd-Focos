@@ -27,7 +27,7 @@ CINZA_ANOS = "#B8B8B8"
 CINZA_FAIXA = "#DDDDDD"
 TITULOS_COMPARATIVO = {"mensal": "Comparativo mensal", "semanal": "Comparativo semanal",
                        "semestre1": "Comparativo 1º semestre", "semestre2": "Comparativo 2º semestre"}
-PASSO_ROTULOS = {"mensal": 1, "semanal": 4, "semestre1": 15, "semestre2": 15}
+PASSO_ROTULOS = {"mensal": 1, "semanal": 4, "semestre1": 1, "semestre2": 1}
 
 
 # -------------------------------------------------------------- Estáticos
@@ -44,8 +44,8 @@ def grafico_comparativo(est: EstatisticasMunicipio, unidade: str):
     for nome, coluna, cor in (("Máximo", "maximo", VERMELHO_MAXIMO), ("Média", "media", LARANJA_MEDIA),
                               ("Mínimo", "minimo", VERDE_MINIMO)):
         if nome in estatisticas:
-            ax.plot(x, dados[coluna], color=cor, marker="o" if unidade in ("mensal", "semanal") else None,
-                    markersize=3 if unidade != "mensal" else 4, linewidth=1.6 if unidade != "semestre1" else 1.2, label=f"{nome} ({est.anos_estatistica[0]}–{est.anos_estatistica[-1]})"
+            ax.plot(x, dados[coluna], color=cor, marker="o",
+                    markersize=3 if unidade != "mensal" else 4, linewidth=1.6, label=f"{nome} ({est.anos_estatistica[0]}–{est.anos_estatistica[-1]})"
                     if est.anos_estatistica else nome, zorder=4)
     rotulos = dados["rotulo"].tolist()
     passo = PASSO_ROTULOS[unidade]
@@ -97,10 +97,12 @@ def _destaques(est: EstatisticasMunicipio) -> list[tuple[int, str, str, str]]:
     linhas = [(est.ano_referencia, AZUL_REFERENCIA, "-", f"{est.ano_referencia} (referência)")]
     if est.ano_anterior:
         linhas.append((est.ano_anterior, ROXO_ANTERIOR, "-", f"{est.ano_anterior} (anterior)"))
+    n = len(est.anos_intensidade)
+    janela = "no último ano" if n == 1 else f"nos últimos {n} anos"
     if est.ano_mais_intenso:
-        linhas.append((est.ano_mais_intenso, VERMELHO_MAXIMO, "--", f"{est.ano_mais_intenso} (mais intenso)"))
+        linhas.append((est.ano_mais_intenso, VERMELHO_MAXIMO, "--", f"{est.ano_mais_intenso} (mais intenso {janela})"))
     if est.ano_menos_intenso and est.ano_menos_intenso != est.ano_mais_intenso:
-        linhas.append((est.ano_menos_intenso, VERDE_MINIMO, "--", f"{est.ano_menos_intenso} (menos intenso)"))
+        linhas.append((est.ano_menos_intenso, VERDE_MINIMO, "--", f"{est.ano_menos_intenso} (menos intenso {janela})"))
     return linhas
 
 
@@ -174,7 +176,7 @@ def interativo_comparativo(est: EstatisticasMunicipio, unidade: str) -> alt.Laye
     longo["serie"] = longo["serie"].map({"maximo": "Máximo", "media": "Média", "minimo": "Mínimo"})
     longo = longo[longo["serie"].isin(estatisticas)]
     legenda = alt.selection_point(fields=["serie"], bind="legend")
-    linhas = alt.Chart(longo).mark_line(point=unidade in ("mensal", "semanal")).encode(
+    linhas = alt.Chart(longo).mark_line(point=True).encode(
         x=eixo_x, y="valor:Q",
         color=alt.Color("serie:N", title=f"{ano} × demais anos",
                         scale=alt.Scale(domain=["Máximo", "Média", "Mínimo"],
@@ -257,6 +259,33 @@ def grafico_nowcast(nowcast):
     ax.set_title(f"Focos por dia nos últimos {len(dados)} dias — {nowcast.municipio.title()}{periodo}",
                  fontsize=10, fontweight="bold")
     ax.legend(fontsize=7.5, frameon=False, ncol=4, loc="upper left")
+    fig.tight_layout()
+    return fig
+
+
+def grafico_nowcast_semanal(nowcast):
+    """Focos por semana no último ano × máximo e média da mesma semana nos anos anteriores (PDF e PNG)."""
+    dados = nowcast.semanal
+    if dados.empty:
+        return None
+    x = np.arange(len(dados))
+    fig, ax = plt.subplots(figsize=(10, 3.4), dpi=150)
+    ax.bar(x, dados["focos"], color=AZUL_REFERENCIA, width=0.7, label="Último ano", zorder=3)
+    for coluna, cor, rotulo in (("maximo", VERMELHO_MAXIMO, "Máximo da mesma semana"),
+                                ("media", LARANJA_MEDIA, "Média da mesma semana")):
+        ax.plot(x, dados[coluna], color=cor, marker="o", markersize=2.5, linewidth=1.5, label=rotulo, zorder=4)
+    ax.set_xticks(x[::2])
+    ax.set_xticklabels([d.strftime("%d/%m/%y") for d in dados["fim"]][::2], rotation=45, ha="right", fontsize=7)
+    ax.set_xlabel("Semana terminada em", fontsize=8)
+    ax.tick_params(axis="y", labelsize=8)
+    ax.yaxis.set_major_formatter(FuncFormatter(fmt_milhar_eixo))
+    ax.set_ylabel("Focos na semana", fontsize=8)
+    ax.grid(axis="y", linestyle=":", alpha=0.5, zorder=0)
+    periodo = (f" — anos anteriores: {nowcast.anos_comparados[0]}–{nowcast.anos_comparados[-1]}"
+               if nowcast.anos_comparados else "")
+    ax.set_title(f"Focos por semana nas últimas {len(dados)} semanas — {nowcast.municipio.title()}{periodo}",
+                 fontsize=10, fontweight="bold")
+    ax.legend(fontsize=7.5, frameon=False, ncol=3, loc="upper left")
     fig.tight_layout()
     return fig
 

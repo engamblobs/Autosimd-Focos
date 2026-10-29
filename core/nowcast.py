@@ -7,13 +7,14 @@ ser provisório, ``core/atualizacao.py``). Compara cada dia recente com o mesmo 
 anos anteriores e com a média de uma janela de 7 dias em volta dele (±3 dias, P20).
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 import numpy as np
 import pandas as pd
 
 DIAS_SERIE = 30
+SEMANAS_SERIE = 52        # focos por semana no último ano (blocos de 7 dias até o último dia)
 MEIA_JANELA = 3            # janela de 7 dias: o dia ±3
 FAIXAS_IDADE = [(0, 0, "Último dia"), (1, 2, "1–2 dias antes"), (3, 6, "3–6 dias antes"), (7, 29, "7–29 dias antes")]
 
@@ -27,6 +28,7 @@ class Nowcast:
     serie: pd.DataFrame                    # data, focos, media, maximo (mesmo dia), media_janela (±3 dias)
     anos_comparados: list[int]
     indicadores: dict
+    semanal: pd.DataFrame = field(default_factory=pd.DataFrame)   # inicio, fim, focos, media, maximo (mesma semana)
 
     def recentes(self, dias: int) -> pd.DataFrame:
         return self.focos[self.focos["dias_atras"] < dias]
@@ -51,8 +53,9 @@ def nowcast_territorio(focos: pd.DataFrame, nome: str, ultimo_dia: date, inicio_
     primeiro_ano_completo = inicio_base.year if inicio_base == date(inicio_base.year, 1, 1) else inicio_base.year + 1
     anos = list(range(primeiro_ano_completo, ultimo_dia.year))
     focos = focos[focos["ano"] <= ultimo_dia.year]
-    focos = focos.assign(data=pd.to_datetime(focos["data"]).dt.date)
+    # contagem por dia sobre o texto ISO (rápido mesmo com o estado inteiro); só as datas distintas viram date
     por_dia = focos["data"].value_counts()
+    por_dia.index = [date.fromisoformat(d) for d in por_dia.index]
 
     inicio = ultimo_dia - timedelta(days=dias - 1)
     linhas = []
@@ -67,7 +70,8 @@ def nowcast_territorio(focos: pd.DataFrame, nome: str, ultimo_dia: date, inicio_
                        "media_janela": float(np.mean(janela)) if janela else np.nan})
     serie = pd.DataFrame(linhas)
 
-    recentes = focos[focos["data"] >= inicio].copy()
+    recentes = focos[focos["data"] >= inicio.isoformat()].copy()
+    recentes["data"] = [date.fromisoformat(d) for d in recentes["data"]]
     recentes["dias_atras"] = [(ultimo_dia - d).days for d in recentes["data"]]
     recentes["idade"] = [next(n for a, b, n in FAIXAS_IDADE if a <= x <= b) for x in recentes["dias_atras"]]
     recentes = recentes.sort_values(["data", "lat"], ascending=[False, True])[
@@ -76,7 +80,7 @@ def nowcast_territorio(focos: pd.DataFrame, nome: str, ultimo_dia: date, inicio_
     # Acumulado no ano até o mesmo dia/mês, comparado com os anos anteriores
     def acumulado(ano: int) -> int | None:
         fim = _mesmo_dia(ultimo_dia, ano) or date(ano, 2, 28)
-        return int(((focos["data"] >= date(ano, 1, 1)) & (focos["data"] <= fim)).sum())
+        return int(por_dia[[date(ano, 1, 1) <= d <= fim for d in por_dia.index]].sum())
 
     acumulados = {a: acumulado(a) for a in anos}
     atual = acumulado(ultimo_dia.year)
@@ -98,4 +102,31 @@ def nowcast_territorio(focos: pd.DataFrame, nome: str, ultimo_dia: date, inicio_
         "posicao_acumulado": 1 + sum(v > atual for v in acumulados.values()),
         "anos_ranking": len(acumulados) + 1,
     }
-    return Nowcast(municipio, ultimo_dia, provisorio, recentes, serie, anos, indicadores)
+    semanal = serie_semanal(por_dia, ultimo_dia, primeiro_ano_completo)
+    return Nowcast(municipio, ultimo_dia, provisorio, recentes, serie, anos, indicadores, semanal)
+
+
+def _anos_antes(dia: date, anos: int) -> date:
+    return _mesmo_dia(dia, dia.year - anos) or date(dia.year - anos, 2, 28)
+
+
+def serie_semanal(por_dia: pd.Series, ultimo_dia: date, primeiro_ano_completo: int,
+                  semanas: int = SEMANAS_SERIE) -> pd.DataFrame:
+    """Focos por semana (7 dias corridos terminando no último dia) no último ano × a mesma semana nos anos
+    anteriores que a base cobre por inteiro: média e máximo."""
+    contagem = por_dia.to_dict()
+
+    def soma(inicio: date, fim: date) -> int:
+        return sum(contagem.get(inicio + timedelta(days=k), 0) for k in range((fim - inicio).days + 1))
+
+    linhas = []
+    for n in range(semanas - 1, -1, -1):
+        fim = ultimo_dia - timedelta(days=7 * n)
+        inicio = fim - timedelta(days=6)
+        anteriores = [soma(_anos_antes(inicio, k), _anos_antes(fim, k))
+                      for k in range(1, ultimo_dia.year - primeiro_ano_completo + 1)
+                      if _anos_antes(inicio, k) >= date(primeiro_ano_completo, 1, 1)]
+        linhas.append({"inicio": inicio, "fim": fim, "focos": soma(inicio, fim),
+                       "media": float(np.mean(anteriores)) if anteriores else np.nan,
+                       "maximo": float(np.max(anteriores)) if anteriores else np.nan})
+    return pd.DataFrame(linhas)

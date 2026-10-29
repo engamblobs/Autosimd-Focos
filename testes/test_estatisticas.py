@@ -95,18 +95,18 @@ def test_dia_a_dia_dias_inexistentes(focos, cobertura):
 
 
 def test_comparativos_mensal_semanal_e_semestres(est):
-    """P12: mensal, semanal e os dois semestres dia a dia."""
+    """P12: mensal, semanal e os dois semestres em semanas (blocos de 7 dias desde 01/01 e 01/07)."""
     c = est.comparativos
     assert set(c) == {"mensal", "semanal", "semestre1", "semestre2"}
-    assert (len(c["mensal"]), len(c["semanal"]), len(c["semestre1"]), len(c["semestre2"])) == (12, 53, 182, 184)
-    assert c["semestre1"]["rotulo"].iloc[0] == "01/01" and c["semestre2"]["rotulo"].iloc[-1] == "31/12"
+    assert (len(c["mensal"]), len(c["semanal"]), len(c["semestre1"]), len(c["semestre2"])) == (12, 53, 26, 27)
+    assert c["semestre1"]["rotulo"].iloc[0] == "1" and c["semestre2"]["rotulo"].iloc[-1] == "27"
     for unidade in ("mensal", "semanal"):
         assert c[unidade]["referencia"].sum() == est.mensal.loc[2024, "Total"]
         assert c[unidade]["maximo"].sum() == est.mensal.loc[2023, "Total"]
     semestres = c["semestre1"]["referencia"].sum() + c["semestre2"]["referencia"].sum()
     assert semestres == est.mensal.loc[2024, "Total"]
-    assert np.isnan(c["semestre1"].set_index("rotulo").loc["29/02", "maximo"])   # 2023 não tem 29/02
-    assert list(tabela_comparativo_exibicao(est, "semestre1").columns) == ["Dia", "2024", "Mínimo", "Média", "Máximo"]
+    assert list(tabela_comparativo_exibicao(est, "semestre1").columns) == [
+        "Semana do semestre", "2024", "Mínimo", "Média", "Máximo"]
 
 
 def test_blocos_de_7_dias():
@@ -116,8 +116,13 @@ def test_blocos_de_7_dias():
     assert semanas.loc[2024, 1] == 2 and semanas.loc[2024, 2] == 1 and semanas.loc[2024, 53] == 1
     corte = matriz_periodos(focos, [2024], "semanal", date(2024, 1, 1), date(2024, 1, 10))
     assert corte.loc[2024, 2] == 1 and np.isnan(corte.loc[2024, 3])    # depois do fim dos dados = vazio
-    dias = matriz_periodos(focos, [2024], "semestre2", date(2024, 1, 1), date(2024, 12, 31))
-    assert dias.loc[2024].sum() == 1                                     # só 31/12 está no 2º semestre
+    s2 = matriz_periodos(focos, [2024], "semestre2", date(2024, 1, 1), date(2024, 12, 31))
+    assert s2.loc[2024].sum() == 1 and s2.loc[2024, 27] == 1             # 31/12: 27ª semana (30–31/12)
+    s1 = matriz_periodos(focos, [2024], "semestre1", date(2024, 1, 1), date(2024, 12, 31))
+    assert s1.loc[2024, 1] == 2 and s1.loc[2024, 2] == 1 and s1.loc[2024].sum() == 3
+    julho = pd.DataFrame({"data": pd.to_datetime(["2023-07-01", "2023-07-07", "2023-07-08"]), "ano": 2023})
+    s2 = matriz_periodos(julho, [2023], "semestre2", date(2023, 1, 1), date(2023, 12, 31))
+    assert s2.loc[2023, 1] == 2 and s2.loc[2023, 2] == 1                 # semanas contadas desde 01/07
 
 
 def test_acumulado(est):
@@ -153,6 +158,9 @@ def test_estatisticas_de_terra_indigena(df, cobertura):
 def test_extremos_por_coluna():
     tabela = pd.DataFrame({"a": [1, 5, 5, 0]}, index=["x", "y", "z", "Mínimo"])
     assert extremos_por_coluna(tabela, ["x", "y", "z"]) == {"a": ({"x"}, {"y", "z"})}
+    # meses com 0 não são destacados: o amarelo vai para o menor valor diferente de 0
+    com_zero = pd.DataFrame({"a": [0, 3, 7], "b": [0, 0, 0]}, index=["x", "y", "z"])
+    assert extremos_por_coluna(com_zero, ["x", "y", "z"]) == {"a": ({"y"}, {"z"}), "b": (set(), set())}
 
 
 def test_graficos(est):

@@ -29,9 +29,11 @@ Município sem focos no ano final: posição "Sem focos".
 - Comparativo regional: municípios da mesma região com focos em `ano_fim`, posição refeita dentro da região, % de cada um no total da região. Pará: **Região de Integração**; demais estados: **Região Geográfica Imediata** do IBGE (2017), `referencia/municipios_br.csv` (P4).
 - UCs e TIs: rankings no **estado** (no município, o estado dele; na UC/TI, a UF com mais focos da área) e no **Brasil**, no período, com participação no total de focos em áreas do mesmo tipo (P6).
 
-## 4. Grade de 10 km e densidade de kernel
+## 4. Grade proporcional ao território e densidade de kernel
 
-**Grade (`core/grade.py`) — ajustada à latitude (P8):** célula de 10 km × 10 km de verdade: 10/110,574 ≈ 0,090° de latitude × 10/(111,32 · cos φ)° de longitude, com φ = latitude central do território (0,091° no Pará, 0,104° no RS). Propósito: no v0.10 a célula tinha 0,09° nos dois eixos, o que dava ~10 × 10 km no Equador mas ~8,7 × 10 km no Sul; com o ajuste, toda célula tem ~100 km² e as contagens de lugares diferentes são comparáveis. A observação aparece no mapa 3, no PDF, na tela e no GeoJSON (`descricao`). Começa uma célula a sudoeste do retângulo envolvente do território.
+**Tamanho da célula — proporcional ao território (pedido de 28/10/2026):** célula = 10 km ÷ 1, 2, 4 ou 8 (**10, 5, 2,5 ou 1,25 km**), a que deixa o **lado maior** do retângulo envolvente do território com o número de células mais próximo (em escala logarítmica) de **51** — o de São Félix do Xingu-PA (511 km) com 10 km, resultado considerado ideal (`GRADE_CELULAS_LADO_MAIOR`, `GRADE_DIVISORES` em `core/config.py`). Territórios maiores que a referência ficam em 10 km; o mínimo é 1,25 km (pouco acima do pixel de ~1 km do MODIS). Exemplos no Pará: São Félix do Xingu e Altamira 10 km; Marabá e Paragominas 5 km; Bragança, Belém, Maracanã, Curuçá, Marituba 1,25 km (Maracanã: 23 × 43 células; com 10 km eram 5 × 8). Vale para o mapa 3, o GeoJSON do QGIS e o risco de recorrência (mesma grade nos três). Como a recorrência depende do tamanho da célula, ela só é comparável entre territórios com a mesma célula.
+
+**Grade (`core/grade.py`) — ajustada à latitude (P8):** célula de lado L km de verdade (L = tamanho acima): L/110,574° de latitude × L/(111,32 · cos φ)° de longitude, com φ = latitude central do território (com 10 km: 0,091° no Pará, 0,104° no RS). Propósito: no v0.10 a célula tinha 0,09° nos dois eixos, o que dava ~10 × 10 km no Equador mas ~8,7 × 10 km no Sul; com o ajuste, toda célula tem L² km² em qualquer latitude. A observação aparece no mapa 3, no PDF, na tela e no GeoJSON (`descricao`). Começa uma célula a sudoeste do retângulo envolvente do território.
 - **Recorrência:** nº de anos do período em que a célula teve ao menos um foco (mapa 3 e GeoJSON).
 - GeoJSON do QGIS: só as células com foco; limites do território (sem limite: extensão dos focos).
 
@@ -75,12 +77,12 @@ Implementação: `core/estatisticas.py` (`estatisticas_territorio`). Modelo: htt
 | Cobertura | Da 1ª à última data da base, dentro do período (hoje 04/07/2002 até o último dia buscado). Mês, semana ou dia fora da cobertura = vazio ("-"), nunca zero |
 | Ano de referência | Padrão = ano final; ajustável na tela. É o ano das barras e das linhas destacadas |
 | Mínimo, média, máximo | Por coluna, com todos os anos do **período da análise** (P15) **menos o de referência**, ignorando vazios |
-| Destaque da tabela mês a mês | Menor valor de cada coluna em amarelo e maior em vermelho, entre os mesmos anos do mínimo/máximo (o ano de referência não é destacado); empate = todos destacados |
+| Destaque da tabela mês a mês | Menor valor de cada coluna em amarelo e maior em vermelho, entre os mesmos anos do mínimo/máximo (o ano de referência não é destacado); empate = todos destacados. **Zero nunca é destacado**: o amarelo vai para o menor valor diferente de 0, e a coluna só com zeros fica sem destaque (vale também para o dia a dia) |
 | Dia a dia | Um mês (padrão: o último com dados no ano de referência), ano de referência e o anterior, dias 1–31 e total |
-| Comparativos (P12) | **Mensal**; **semanal** (blocos de 7 dias a partir de 1º de janeiro, 53 semanas, a última curta); **1º semestre** (cada dia de 01/01 a 30/06) e **2º semestre** (01/07 a 31/12), como no INPE; 29/02 só nos anos bissextos |
+| Comparativos (P12) | **Mensal**; **semanal** (blocos de 7 dias a partir de 1º de janeiro, 53 semanas, a última curta); **1º semestre** (01/01 a 30/06) e **2º semestre** (01/07 a 31/12) **em semanas**: blocos de 7 dias a partir do 1º dia do semestre, a última mais curta como a 53ª do semanal — 26 no 1º (a 26ª com 6 dias, 7 nos bissextos) e 27 no 2º (a 27ª = 30–31/12) (pedido de 28/10/2026; antes, cada dia) |
 | Sazonalidade mensal | Média de cada mês nos mesmos anos do mínimo/máximo, faixa p10–p90 (os percentis escolhidos) e a linha do ano de referência |
 | Acumulado mensal | Soma do ano até cada mês; uma linha por ano; faixa entre os percentis escolhidos (padrão p10–p90) e média, com os anos do mínimo/máximo |
-| Mais e menos intenso | Maior e menor total anual entre os N anos **completos** imediatamente anteriores ao ano de referência (padrão N = 10) |
+| Mais e menos intenso | Maior e menor total anual entre os N anos **completos** imediatamente anteriores ao ano de referência (padrão N = 10). A legenda do acumulado diz a janela: "2025 (mais intenso nos últimos 10 anos)" |
 | Anos parciais | Anos que a base não cobre inteiros (2002) entram nas estatísticas e são citados nas notas |
 
 ## 9. Cenário atual — nowcast diário (`core/nowcast.py`)
@@ -91,6 +93,7 @@ Implementação: `core/estatisticas.py` (`estatisticas_territorio`). Modelo: htt
 | Focos | Todos os focos do município, UC ou TI (P23) na base (independe do período da barra lateral), pelo cruzamento com o polígono (§1), até o último dia da base |
 | Último dia | O de `atualizacao_inpe.json`; se for provisório, a tela avisa que ainda é parcial |
 | Comparação | Cada um dos últimos 30 dias × o mesmo dia do calendário nos anos anteriores que a base cobre desde 1º de janeiro (2003 em diante): média e máximo; e a média da **janela de 7 dias** (o dia ±3) nesses anos (P20). 29/02 sem par é ignorado |
+| Semanal | Últimas 52 semanas (blocos de 7 dias até o último dia) × média e máximo da mesma semana nos anos anteriores (no PDF, no Excel e no pacote) |
 | Relatório | PDF, Excel e CSV/PNG do pacote: indicadores, gráfico dos 30 dias e mapa dos últimos 7 dias (P18) |
 | Indicadores | Focos no último dia, no dia anterior, nos últimos 7 e 30 dias (com a diferença para a soma das médias dos mesmos dias) e no ano até o mesmo dia/mês (% em relação à média desses anos e posição entre eles, empate = mesma posição) |
 | Idade no mapa | Último dia; 1–2 dias antes; 3–6; 7–29 |
@@ -105,3 +108,18 @@ Implementação: `core/estatisticas.py` (`estatisticas_territorio`). Modelo: htt
 | Últimos 7 / 30 dias | Até a data dos dados |
 | Regiões e municípios | Ranking do ano final com o desempate do §3 |
 | Estatísticas | As do §8, com os focos do estado/região |
+
+## 11. Cenário atual do estado — últimas 24 h e última semana (`core/cenario.py`)
+
+| Regra | Definição |
+|---|---|
+| Território | Estado inteiro ou a região escolhida no filtro do Panorama (§10); independe do período |
+| Últimas 24 h | O satélite de referência (AQUA_M-T) passa **uma vez por dia** e a base guarda só a data: últimas 24 h = a **passagem mais recente**, o último dia com focos na base inteira, sem passar do último dia buscado no INPE. Enquanto a passagem do dia corrente não é processada, vale a do dia anterior (P28) |
+| Última semana | Os 7 dias até o dia da passagem, inclusive |
+| Médias | As do nowcast (§9): soma das médias do mesmo dia nos anos anteriores cobertos desde 1º de janeiro |
+| Parcial | Dia da passagem ainda provisório (`atualizacao_inpe.json`): indicador marcado "(parcial)" |
+| Municípios | Focos nas 24 h e na semana; ordem: 24 h, depois semana |
+| UCs e TIs | Pelo cruzamento do foco (§1); ordem: semana, depois 24 h |
+| Semanas (último ano) | 52 blocos de 7 dias corridos terminando no dia da passagem; cada um × a mesma semana (mesmas datas) nos anos anteriores cobertos desde 1º de janeiro: média e máximo |
+| Recorrência do mês | Grade proporcional (§4) sobre o limite do estado/região; por célula, nº de anos (os comparados do nowcast) com pelo menos um foco no mês da passagem; cada foco da semana recebe o valor da célula onde caiu. "Frequente" = foco no mês em pelo menos metade desses anos |
+| Base regravada | O nowcast regrava a base em segundo plano; a página só recarrega sozinha no ciclo do painel da barra lateral, nunca no meio de um clique |

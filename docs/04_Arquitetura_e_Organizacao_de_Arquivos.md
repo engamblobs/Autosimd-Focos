@@ -19,16 +19,18 @@ Autosimd-Focos 2/                  # pasta de trabalho; o projeto continua se ch
 │   ├── atualizacao.py             # busca no INPE (diário/mensal), conversão, gravação e a thread de segundo plano
 │   ├── nowcast.py                 # cenário atual do município (últimos 30 dias)
 │   ├── panorama.py                # página inicial: panorama do estado/região
+│   ├── cenario.py                 # cenário atual do estado/região: últimas 24 h e última semana
 │   ├── territorios.py             # limites de município/UC/TI, sobreposição, área geodésica
 │   ├── diagnostico.py             # indicadores, rankings, séries (DiagnosticoMunicipio, DiagnosticoArea)
 │   ├── estatisticas.py            # estatísticas do município no modelo INPE (mês, dia, semana, quinzena, acumulado)
 │   ├── graficos_estatisticas.py   # comparativos e acumulado: matplotlib (PDF/PNG) e Altair (tela, interativo)
-│   ├── grade.py                   # grade de 10 km ajustada à latitude: contagem, recorrência, GeoJSON do QGIS
+│   ├── grade.py                   # grade proporcional ao território (10/5/2,5/1,25 km), ajustada à latitude: contagem, recorrência, GeoJSON, risco
 │   ├── kernel.py                  # densidade de kernel gaussiano (numpy)
 │   ├── fundo_satelite.py          # tiles do Google Satélite para o mapa do cenário atual
 │   ├── graficos.py                # top do estado, evolução, sazonalidade
 │   ├── mapas.py                   # mapas 1 a 4
 │   ├── relatorio_pdf.py           # PDF do diagnóstico municipal
+│   ├── relatorio_cenario.py       # PDF do cenário atual do estado/região
 │   └── produto.py                 # figuras + Excel + metadados + pacote .zip
 │
 ├── referencia/                    # tabelas fixas versionadas no git
@@ -49,7 +51,7 @@ Autosimd-Focos 2/                  # pasta de trabalho; o projeto continua se ch
 │   └── gerar_amostras.py                   # gera amostras/bases a partir de BASES_GEOJSON
 ├── empacotamento/                 # pasta portátil Windows (padrão AutoSIMD-DESASTRE)
 │   ├── empacotar_windows.py       # monta dist/AutoSIMD-FOCOS_v<versão>/ e o .zip
-│   ├── iniciar.py                 # sobe o Streamlit (porta 8521–8570), atalho na Área de Trabalho
+│   ├── iniciar.py                 # sobe o Streamlit (porta 8521–8570), atalho "AutoSIMD-FOCOS v<versão>" na Área de Trabalho
 │   ├── Iniciar_AutoSIMD-FOCOS.bat, LEIA-ME.txt, config.toml, requirements-windows.txt
 │   └── static/autosimd_focos.txt  # identificação do próprio servidor
 ├── python/                        # cache do Python portátil do Windows (fora do git)

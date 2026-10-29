@@ -39,9 +39,18 @@ def _gaussiana(sigma_celulas: float) -> np.ndarray:
 
 
 def _suavizar(matriz: np.ndarray, pesos: np.ndarray) -> np.ndarray:
-    """Convolução separável (linhas e colunas) com bordas zeradas."""
-    linhas = np.apply_along_axis(lambda v: np.convolve(v, pesos, mode="same"), 0, matriz)
-    return np.apply_along_axis(lambda v: np.convolve(v, pesos, mode="same"), 1, linhas)
+    """Convolução separável (linhas e colunas) com bordas zeradas.
+
+    ``mode="full"`` recortado no centro, e não ``mode="same"``: este devolve o tamanho do maior dos
+    dois vetores, e em territórios pequenos o filtro é maior que o raster (APA Pedregulho, ~8 km).
+    """
+    raio = len(pesos) // 2
+
+    def convolver(v):
+        return np.convolve(v, pesos, mode="full")[raio:raio + len(v)]
+
+    linhas = np.apply_along_axis(convolver, 0, matriz)
+    return np.apply_along_axis(convolver, 1, linhas)
 
 
 def densidade_kernel(lons, lats, limites, poligono=None, desvio_km: float = DESVIO_KERNEL_KM,

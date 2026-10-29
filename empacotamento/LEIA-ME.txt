@@ -8,6 +8,14 @@ DOWNLOAD OFICIAL
   https://github.com/engamblobs/Autosimd-Focos/releases
   Não use cópias recebidas por e-mail, WhatsApp, pen drive ou outros sites.
 
+CONFERIR O ARQUIVO BAIXADO
+- A página da versão no GitHub (Releases) mostra o código SHA256 do .zip.
+  Antes de extrair, abra o PowerShell na pasta onde está o .zip e digite:
+    Get-FileHash .\AutoSIMD-FOCOS_{versao}.zip
+- O código da coluna "Hash" tem que ser IGUAL ao publicado (maiúsculas ou
+  minúsculas não importam). Se for diferente, não use o arquivo: apague-o
+  e avise o suporte.
+
 REQUISITOS
 - Windows 10 ou 11 (64 bits). Não é preciso instalar Python nem ter internet.
 - Cerca de 2 GB livres em disco.
@@ -17,7 +25,7 @@ COMO ABRIR
    Não execute de dentro do .zip.
 2. Dê dois cliques em "Iniciar_AutoSIMD-FOCOS.bat".
 3. Uma janela preta abre e, em alguns segundos, o sistema aparece no navegador.
-4. Na primeira vez, é criado na Área de Trabalho o atalho "AutoSIMD-FOCOS"
+4. Na primeira vez, é criado na Área de Trabalho o atalho "AutoSIMD-FOCOS {versao}"
    (com o ícone da Sala de Monitoramento). Das próximas vezes, use o atalho.
    Se mover a pasta do sistema de lugar, abra o .bat uma vez para
    atualizar o atalho.
@@ -50,8 +58,9 @@ ATUALIZAR AS BASES DE DADOS
 - Depois de substituir, feche e abra o sistema novamente.
 
 PROBLEMAS COMUNS
-- O Windows mostrou "O Windows protegeu o computador": clique em
-  "Mais informações" e depois em "Executar assim mesmo".
+- O Windows mostrou "O Windows protegeu o computador": se o .zip foi
+  conferido (veja CONFERIR O ARQUIVO BAIXADO), clique em "Mais informações"
+  e depois em "Executar assim mesmo".
 - A janela preta fechou com erro: tire um print da mensagem e envie ao suporte.
 
 SOBRE O DESENVOLVIMENTO

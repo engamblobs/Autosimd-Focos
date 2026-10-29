@@ -2,7 +2,8 @@
 """Figuras e pacote .zip do diagnóstico — município, UC ou TI (docs/10 §1).
 
 ``Diagnostico_<MUN|UC|TI>_<Territorio>_<ano1>_<ano2>.zip``:
-    relatorio_diagnostico_<…>.pdf, estatisticas_<…>.xlsx, grade_10x10km_<…>.geojson,
+    relatorio_diagnostico_<…>.pdf, estatisticas_<…>.xlsx, grade_10x10km_<…>.geojson
+    (+ grade_<tam>x<tam>km_<…>.geojson proporcional),
     dados_<MUN|UC|TI>_<…>.csv, ranking_municipios/ucs/tis.csv, metadados.json,
     imagens/*.png (gráficos, mapas, estatísticas no modelo INPE e, no município, o cenário atual),
     estatisticas/*.csv (tabelas no modelo INPE), nowcast/*.csv (município),
@@ -20,7 +21,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from shapely.geometry import mapping
 
-from core.config import APP_NOME, APP_VERSAO, SIGLA_TIPO, TIPO_MUNICIPIO
+from core.config import APP_NOME, APP_VERSAO, SIGLA_TIPO, TAMANHO_CELULA_KM, TIPO_MUNICIPIO
 from core.diagnostico import MESES, DiagnosticoMunicipio, ranking_simples
 from core.estatisticas import (
     EstatisticasMunicipio, extremos_por_coluna, notas, tabela_acumulado_exibicao, tabela_comparativo_exibicao,
@@ -28,11 +29,11 @@ from core.estatisticas import (
 )
 from core.grade import grade_qgis, kml_risco, nota_grade, risco_de_recorrencia
 from core.graficos import grafico_evolucao_tendencia, grafico_top_estado
-from core.graficos_estatisticas import figuras_estatisticas, grafico_nowcast
+from core.graficos_estatisticas import figuras_estatisticas, grafico_nowcast, grafico_nowcast_semanal
 from core.mapas import mapa_densidade, mapa_dispersao, mapa_recentes, mapa_recorrencia, mapa_trimestral
 from core.relatorio_pdf import gerar_pdf
 from core.territorios import area_km2
-from core.texto import nome_arquivo
+from core.texto import neutralizar_formulas, nome_arquivo
 
 DPI_PNG = 180
 DIAS_MAPA_RELATORIO = 7          # mapa do cenário atual no PDF/pacote
@@ -51,6 +52,7 @@ NOMES_PNG = {
     "comparativo_semestre2": "estatisticas_comparativo_2o_semestre",
     "acumulado_mensal": "estatisticas_acumulado_mensal",
     "nowcast_diario": "cenario_atual_ultimos_30_dias",
+    "nowcast_semanal": "cenario_atual_ultimas_52_semanas",
     "nowcast_mapa": "cenario_atual_mapa_focos_recentes",
 }
 COR_MINIMO = "FFD54F"     # destaque do INPE: menor valor da coluna em amarelo, maior em vermelho
@@ -83,6 +85,7 @@ def figuras_territorio(diag, est: EstatisticasMunicipio, nowcast=None, dias_mapa
         figuras["top_estado"] = grafico_top_estado(diag.top_acumulado, diag.municipio)
     if nowcast is not None:
         figuras["nowcast_diario"] = grafico_nowcast(nowcast)
+        figuras["nowcast_semanal"] = grafico_nowcast_semanal(nowcast)
         figuras["nowcast_mapa"] = mapa_recentes(nowcast.recentes(dias_mapa), diag.poligono, diag.municipio,
                                                 nowcast.ultimo_dia, dias_mapa, areas)
     return figuras
@@ -124,8 +127,8 @@ def tabelas_estatisticas(est: EstatisticasMunicipio) -> dict[str, pd.DataFrame]:
         "Focos_Dia_a_Dia": tabela_diaria_exibicao(est),
         "Comparativo_Mensal": tabela_comparativo_exibicao(est, "mensal").set_index("Mês"),
         "Comparativo_Semanal": tabela_comparativo_exibicao(est, "semanal").set_index("Semana"),
-        "Comparativo_1o_Semestre": tabela_comparativo_exibicao(est, "semestre1").set_index("Dia"),
-        "Comparativo_2o_Semestre": tabela_comparativo_exibicao(est, "semestre2").set_index("Dia"),
+        "Comparativo_1o_Semestre": tabela_comparativo_exibicao(est, "semestre1").set_index("Semana do semestre"),
+        "Comparativo_2o_Semestre": tabela_comparativo_exibicao(est, "semestre2").set_index("Semana do semestre"),
         "Acumulado_Mensal": tabela_acumulado_exibicao(est),
     }
 
@@ -137,9 +140,13 @@ def tabelas_nowcast(nowcast) -> dict[str, pd.DataFrame]:
     recentes = nowcast.focos.assign(data=[d.strftime("%d/%m/%Y") for d in nowcast.focos["data"]]).rename(
         columns={"data": "Data", "dias_atras": "Dias antes do último", "idade": "Idade", "lat": "Latitude",
                  "lon": "Longitude"})
+    semanal = nowcast.semanal.assign(**{c: [d.strftime("%d/%m/%Y") for d in nowcast.semanal[c]]
+                                         for c in ("inicio", "fim")}).rename(columns={
+        "inicio": "Início", "fim": "Fim", "focos": "Focos", "media": "Média da semana (anos anteriores)",
+        "maximo": "Máximo da semana (anos anteriores)"})
     indicadores = pd.DataFrame(list(nowcast.indicadores.items()), columns=["Indicador", "Valor"])
-    return {"Nowcast_Ultimos_30_Dias": serie, "Nowcast_Focos_Recentes": recentes,
-            "Nowcast_Indicadores": indicadores}
+    return {"Nowcast_Ultimos_30_Dias": serie, "Nowcast_Ultimas_52_Semanas": semanal,
+            "Nowcast_Focos_Recentes": recentes, "Nowcast_Indicadores": indicadores}
 
 
 def _destacar_extremos(planilha, tabela: pd.DataFrame, linhas: list[str]):
@@ -171,6 +178,7 @@ def planilha_estatisticas(diag, est: EstatisticasMunicipio, nowcast=None) -> byt
         if nowcast is not None:
             for aba, tabela in tabelas_nowcast(nowcast).items():
                 tabela.to_excel(escritor, sheet_name=aba, index=False)
+        neutralizar_formulas(escritor.book)
     return buffer.getvalue()
 
 
@@ -240,14 +248,18 @@ def pacote(diag, figuras: dict, est: EstatisticasMunicipio, nowcast=None) -> Pac
               else {"uf_predominante": diag.sigla_uf})
     if nowcast is not None:
         extras["nowcast_ate"] = nowcast.ultimo_dia.isoformat()
+    # P31: grade de 10 km sempre (comparável entre territórios) + a proporcional (a do mapa 3 e do risco)
+    grades = {TAMANHO_CELULA_KM: grade_qgis(diag.focos, diag.poligono, TAMANHO_CELULA_KM)}
+    proporcional = grade_qgis(diag.focos, diag.poligono)
+    grades.setdefault(proporcional.get("tamanho_celula_km", TAMANHO_CELULA_KM), proporcional)
     arquivos = {
         f"relatorio_diagnostico_{alvo}_{periodo}.pdf": pdf,
         f"estatisticas_{alvo}_{periodo}.xlsx": planilha_estatisticas(diag, est, nowcast),
         f"dados_{sigla}_{alvo}.csv": diag.focos.to_csv(index=False).encode("utf-8"),
         "metadados.json": metadados(diag.municipio, tipo, diag.ano_inicio, diag.ano_fim, len(diag.focos), extras),
-        f"grade_10x10km_{alvo}.geojson": json.dumps(grade_qgis(diag.focos, diag.poligono), indent=2,
-                                                    ensure_ascii=False).encode("utf-8"),
     }
+    for km, grade in grades.items():
+        arquivos[f"grade_{km:g}x{km:g}km_{alvo}.geojson"] = json.dumps(grade, indent=2, ensure_ascii=False).encode()
     focos_rankings = diag.focos_estado if municipio else diag.focos
     for coluna, nome in (("NM_MUN", "ranking_municipios.csv"), ("UC", "ranking_ucs.csv"), ("TI", "ranking_tis.csv")):
         arquivos[nome] = ranking_simples(focos_rankings, coluna, diag.fim_dados).to_csv(index=False).encode("utf-8")

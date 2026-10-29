@@ -27,11 +27,15 @@ Cada incremento é um pedido separado ao Claude. Só avançar quando o anterior 
 | 11 | Abertura rápida, nowcast em segundo plano, Panorama do Estado, KML de risco | Abre com a base local; thread de atualização (abertura + toggle Nowcast a cada 4 h, modelo HIDRO); página inicial com o estado e filtro por região; cruzes discretas; pasta `risco_de_recorrencia` com 4 KML dissolvidos por quartil | ✔ 2026-10-22 |
 | 12 | Rodadas 4–5 respondidas e publicação | Kernel configurável, Sentinel-2 cloudless (licença aberta), nowcast em UC/TI, GeoJSON de risco; v0.11 publicada no GitHub com Release | ✔ 2026-10-22 |
 
+| 13 | Cenário atual no Panorama do Estado | Últimas 24 h (última passagem) e última semana do estado ou da região, com mapa, gráfico, municípios, UCs/TIs e o PDF do cenário (`docs/07` §11, `docs/10` §8) | ✔ 2026-10-26 (134 testes) |
+| 14 | Ajustes para a v0.12 | Atalho com a versão; legenda do acumulado com a janela do mais/menos intenso (nota abaixo do gráfico removida); zero sem destaque na tabela mês a mês; grade proporcional ao território (10/5/2,5/1,25 km); kernel em UC/TI pequena (APA Pedregulho) sem erro; comparativos semestrais em semanas; rodapé no modelo do HIDRO | ✔ 2026-10-28 (137 testes) |
+| 15 | Rodada 6 respondida e PDF do cenário completo | Gráfico de 52 semanas (diagnóstico e cenário); PDF do cenário com gráficos dos focos, recorrência do mês × focos atuais e estatísticas no fim; GeoJSON dos focos por intervalo de datas (P29); grade de 10 km + proporcional no pacote (P31); notas justificadas e mapa centralizado | ✔ 2026-10-28 |
+
 ## Próximos incrementos (propostos — dependem de `docs/09`)
 
 | # | Incremento | Depende de |
 |---|---|---|
-| 13 | (a definir com o usuário) | — |
+| 16 | (a definir com o usuário) | — |
 
 ## Modelo de pedido ao Claude
 

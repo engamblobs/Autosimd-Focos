@@ -18,6 +18,7 @@ from xml.sax.saxutils import escape
 
 from PIL import Image as PILImage
 from reportlab.lib import colors
+from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.pdfgen import canvas
@@ -107,7 +108,7 @@ def estilos_pdf() -> dict:
         "celula_cab": ParagraphStyle("CelulaCab", parent=base["Normal"], fontName="Helvetica-Bold", fontSize=8,
                                      leading=10, alignment=1),
         "nota": ParagraphStyle("Nota", parent=base["Normal"], fontSize=8, leading=11,
-                               textColor=colors.HexColor("#333333")),
+                               textColor=colors.HexColor("#333333"), alignment=TA_JUSTIFY),
     }
 
 
@@ -236,6 +237,8 @@ def nowcast_pdf(nowcast, figuras: dict, est: dict) -> list:
                  _tabela_indicadores(pares, est), Spacer(1, 6)]
     if figuras.get("nowcast_diario") is not None:
         elementos += [imagem_figura(figuras["nowcast_diario"], LARGURA_UTIL), Spacer(1, 4)]
+    if figuras.get("nowcast_semanal") is not None:
+        elementos += [imagem_figura(figuras["nowcast_semanal"], LARGURA_UTIL), Spacer(1, 4)]
     if figuras.get("nowcast_mapa") is not None:
         elementos += [imagem_figura(figuras["nowcast_mapa"], 430)]
     elementos += [Paragraph("Médias = mesmo dia (e janela de ±3 dias) nos anos anteriores que a base cobre por "

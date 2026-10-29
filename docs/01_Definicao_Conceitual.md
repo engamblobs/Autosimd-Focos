@@ -25,7 +25,7 @@ Gerar, em poucos segundos, um diagnóstico territorial de focos de calor pronto 
 2. Período em anos (intervalo contínuo, inclusive nas pontas).
 3. Indicadores do município: focos no ano final, posição no país e no estado, participação no estado, variação anual e densidade média anual (focos/km²/ano).
 4. Gráficos: top do estado, evolução anual com tendência, sazonalidade mensal.
-5. Mapas: dispersão no ano final (com UCs/TIs sobrepostas), densidade em grade de 10 km, recorrência e migração trimestral.
+5. Mapas: dispersão no ano final (com UCs/TIs sobrepostas), densidade de kernel, recorrência em grade proporcional ao território e migração trimestral.
 6. Tabelas: ranking estadual, comparativo na Região de Integração (Pará), UCs/TIs no município, rankings nacionais de UC e TI.
 7. Pacote .zip: PDF (município), Excel (município), GeoJSON da grade, CSVs e PNGs.
 

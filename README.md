@@ -9,7 +9,7 @@ Sala de Informações e Monitoramento de Desastres (SIMD) — Coordenadoria Esta
 
 O AutoSIMD-FOCOS automatiza a análise histórica de focos de calor detectados por satélite (BDQueimadas/INPE) e gera, em poucos segundos, um diagnóstico territorial pronto para apoiar o planejamento de prevenção e combate a incêndios florestais.
 
-Situação: **v0.11 (22/10/2026)** — reorganização do v0.10 (arquivo único) no modelo do AutoSIMD-DESASTRE, com Panorama do Estado, estatísticas no modelo do Programa Queimadas/INPE, nowcast e base atualizada em segundo plano pelo INPE. Testes: `python -m pytest`.
+Situação: **v0.12 (29/10/2026)** — cenário atual do estado no Panorama (últimas 24 h e última semana, PDF do cenário com gráficos, recorrência do mês e estatísticas; focos em GeoJSON por intervalo de datas), gráfico das últimas 52 semanas, grade proporcional ao território, comparativos semestrais em semanas e pacote Windows com verificação de integridade (SHA256). A v0.11 (22/10/2026) reorganizou o v0.10 no modelo do AutoSIMD-DESASTRE. Testes: `python -m pytest`.
 
 > [!IMPORTANT]
 > **Desenvolvido com Inteligência Artificial.** Todo o código deste programa foi desenvolvido com a utilização de ferramentas de Inteligência Artificial, com acompanhamento, revisão e testes realizados pelos técnicos de Defesa Civil da CEDEC/PA. Os resultados são produzidos automaticamente a partir de bases públicas oficiais e devem ser interpretados por profissionais habilitados. A identidade visual (logo do AutoSIMD-FOCOS) também foi gerada com IA (ChatGPT).
@@ -20,11 +20,12 @@ Você escolhe **o território** e **o período de anos**, clica em **Processar D
 
 - **Resumo executivo** — focos no ano, posição no ranking nacional e estadual do ano, participação no total do estado, variação em relação ao ano anterior e **densidade média anual (focos/km²/ano)**.
 - **Gráficos** — Top 5 municípios do estado, evolução anual dos focos e padrão sazonal (distribuição mensal).
-- **Mapas** — densidade de kernel dos focos no último ano (com as UCs e TIs do município) e no período, recorrência em grade de 10 km × 10 km, migração sazonal por trimestre e o cenário atual sobre imagem de satélite.
+- **Mapas** — densidade de kernel dos focos no último ano (com as UCs e TIs do município) e no período, recorrência em grade proporcional ao território (10 km a 1,25 km), migração sazonal por trimestre e o cenário atual sobre imagem de satélite.
 - **Tabelas** — ranking estadual, comparativo na Região de Integração do Pará e focos por UC/TI no município.
 - **Estatísticas no modelo do Programa Queimadas/INPE** (município, UC e TI) — focos mês a mês e dia a dia, comparativos mensal, semanal e por semestre com mínimo, média e máximo, e o acumulado mensal com faixa p10–p90, em gráficos interativos com parâmetros ajustáveis.
 - **Cenário atual (nowcast)** — focos do último dia, dos últimos 7 e 30 dias e do ano no município, comparados com os mesmos dias dos anos anteriores, com mapa e lista dos focos recentes.
 - **Panorama do Estado** (página inicial) — indicadores, mapa, municípios e estatísticas do estado, com filtro por região.
+  Abre com o **cenário atual**: focos das últimas 24 h (passagem mais recente do satélite de referência) e da última semana, com mapa, municípios, UCs/TIs e o **PDF do cenário** para exportar.
 - **Base sempre atualizada, sem esperar** — o programa abre com a base local e busca os focos novos do INPE em segundo plano; com o **Nowcast** ligado, busca a cada 4 horas; quando o mês fecha, troca os dias diários pelo arquivo mensal consolidado.
 - **Pacote para download (.zip)** com relatório **PDF**, planilha **Excel**, grade **GeoJSON** para o QGIS, **KML de risco de recorrência** (baixo, moderado, alto, muito alto), rankings em CSV e todas as imagens em PNG.
 
@@ -44,24 +45,34 @@ Você escolhe **o território** e **o período de anos**, clica em **Processar D
 
 Na página de Releases, a versão mais recente aparece no topo com a etiqueta **Latest**. Em **Assets**, clique no arquivo `AutoSIMD-FOCOS_v<versão>.zip` para baixar. Os arquivos *Source code (zip)* e *Source code (tar.gz)* contêm apenas o código-fonte, sem as bases de dados, e **não servem para instalar** o programa.
 
+### Conferir o arquivo baixado
+
+Cada Release mostra o código **SHA256** do `.zip` (no texto da versão e ao lado do arquivo, em *Assets*). Antes de extrair, abra o PowerShell na pasta onde está o arquivo e digite:
+
+```powershell
+Get-FileHash .\AutoSIMD-FOCOS_v<versão>.zip
+```
+
+O código da coluna **Hash** tem que ser **igual** ao publicado (maiúsculas ou minúsculas não importam). Se for diferente, não use o arquivo: apague-o e avise a SIMD/CEDEC-PA.
+
 ## Instalação no Windows
 
 Não é preciso instalar Python: o pacote já traz tudo.
 
 **Requisitos:** Windows 10 ou 11 (64 bits) e cerca de 2 GB livres em disco. Internet só para buscar os focos novos do INPE e para a imagem de satélite do cenário atual — sem ela, o sistema funciona com a base que já tem.
 
-1. Baixe o arquivo `AutoSIMD-FOCOS_v<versão>.zip` (≈ 325 MB) na **[página oficial de Releases](https://github.com/engamblobs/Autosimd-Focos/releases/latest)**, conforme a seção [Download oficial](#download-oficial).
+1. Baixe o arquivo `AutoSIMD-FOCOS_v<versão>.zip` (≈ 325 MB) na **[página oficial de Releases](https://github.com/engamblobs/Autosimd-Focos/releases/latest)**, conforme a seção [Download oficial](#download-oficial), e [confira o SHA256](#conferir-o-arquivo-baixado).
 2. Clique com o botão direito no arquivo baixado → **Extrair tudo…** e escolha uma pasta sua (ex.: `C:\AutoSIMD-FOCOS`). **Não execute de dentro do .zip** — extraia primeiro. Evite "Arquivos de Programas": o sistema precisa gravar a base atualizada na própria pasta.
 3. Abra a pasta extraída e dê dois cliques em **`Iniciar_AutoSIMD-FOCOS.bat`**.
-4. Se o Windows exibir *"O Windows protegeu o computador"*, clique em **Mais informações → Executar assim mesmo**.
+4. Se o Windows exibir *"O Windows protegeu o computador"* e o SHA256 do .zip conferiu, clique em **Mais informações → Executar assim mesmo**.
 5. Uma janela preta abre e, em alguns segundos, o sistema aparece no navegador (endereço `http://127.0.0.1:8521`; se essa porta estiver em uso, o sistema usa a próxima livre — 8522, 8523…). Pode ser usado ao mesmo tempo que outros sistemas da SIMD.
-6. Na primeira execução é criado o atalho **AutoSIMD-FOCOS** na Área de Trabalho — use-o nas próximas vezes.
+6. Na primeira execução é criado o atalho **AutoSIMD-FOCOS v<versão>** na Área de Trabalho — use-o nas próximas vezes.
 
 **Focos novos:** o sistema abre com a base que já tem e busca os focos novos do INPE em segundo plano. Ligue o **Nowcast** na barra lateral para buscar na hora e depois a cada 4 horas.
 
 **Para encerrar:** feche a janela preta. Fechar apenas o navegador deixa o sistema rodando.
 
-**Para atualizar o programa:** baixe o `.zip` da nova versão na página oficial, extraia em uma nova pasta e abra o `.bat` dela uma vez — o atalho da Área de Trabalho passa a apontar para a versão nova.
+**Para atualizar o programa:** baixe o `.zip` da nova versão na página oficial, extraia em uma nova pasta e abra o `.bat` dela uma vez — ela cria o seu próprio atalho (com o número da versão) na Área de Trabalho; o da versão anterior pode ser apagado.
 
 ## Para desenvolvedores
 

@@ -5,6 +5,7 @@ Sobe o servidor Streamlit local e abre o navegador quando ele estiver pronto.
 
 import base64
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -30,13 +31,31 @@ ICONE = os.path.join(PASTA, "referencia", "logos", "AutoSIMD-FOCOS.ico")
 MARCADOR_ATALHO = os.path.join(PASTA, ".atalho_criado")
 
 
+def versao_do_programa(pasta=PASTA):
+    """APP_VERSAO lida do texto de core/config.py (sem importar: o inicializador não carrega o programa)."""
+    try:
+        with open(os.path.join(pasta, "core", "config.py"), encoding="utf-8") as f:
+            encontrada = re.search(r'^APP_VERSAO\s*=\s*"([^"]+)"', f.read(), re.MULTILINE)
+    except OSError:
+        return ""
+    return encontrada.group(1) if encontrada else ""
+
+
+def nome_do_atalho(pasta=PASTA):
+    """``AutoSIMD-FOCOS v0.12``: cada versão ganha o seu atalho na Área de Trabalho."""
+    versao = versao_do_programa(pasta)
+    return f"{NOME} v{versao}" if versao else NOME
+
+
 def criar_atalho_area_de_trabalho():
-    """Cria o atalho com ícone na Área de Trabalho na 1ª execução ou se a pasta mudou de lugar."""
+    """Cria o atalho com ícone na Área de Trabalho na 1ª execução, se a pasta mudou de lugar ou de versão."""
     if os.name != "nt":
         return
+    nome_atalho = nome_do_atalho()
+    marcador = f"{PASTA}|{nome_atalho}"
     try:
         with open(MARCADOR_ATALHO, encoding="utf-8") as f:
-            if f.read().strip() == PASTA:
+            if f.read().strip() == marcador:
                 return
     except OSError:
         pass
@@ -46,7 +65,7 @@ def criar_atalho_area_de_trabalho():
 
     script = (
         "$d = [Environment]::GetFolderPath('Desktop');"
-        f"$s = (New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path $d '{NOME}.lnk'));"
+        f"$s = (New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path $d {ps(nome_atalho + '.lnk')}));"
         f"$s.TargetPath = {ps(BAT)};"
         f"$s.WorkingDirectory = {ps(PASTA)};"
         f"$s.IconLocation = {ps(ICONE + ',0')};"
@@ -67,8 +86,8 @@ def criar_atalho_area_de_trabalho():
         caminho_atalho = resultado.stdout.decode("utf-8", "replace").strip()
         if resultado.returncode == 0 and caminho_atalho and os.path.exists(caminho_atalho):
             with open(MARCADOR_ATALHO, "w", encoding="utf-8") as f:
-                f.write(PASTA)
-            print(f"Atalho '{NOME}' criado na Área de Trabalho.")
+                f.write(marcador)
+            print(f"Atalho '{nome_atalho}' criado na Área de Trabalho.")
     except (OSError, subprocess.SubprocessError):
         pass  # o atalho é conveniência; o sistema abre normalmente sem ele
 

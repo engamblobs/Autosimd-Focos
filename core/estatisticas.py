@@ -20,14 +20,13 @@ import pandas as pd
 MESES_CURTOS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 MESES_TABELA = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
                 "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
-# unidade → (rótulo do eixo, dias por bloco; None = mês do calendário, "dia" = cada dia do semestre)
-UNIDADES = {"mensal": ("Mês", None), "semanal": ("Semana", 7), "semestre1": ("Dia", "dia"),
-            "semestre2": ("Dia", "dia")}
-# Dias do calendário de cada semestre (ano bissexto, para incluir 29/02; nos outros anos ele fica vazio)
-DIAS_SEMESTRE = {
-    "semestre1": [(d.month, d.day) for d in pd.date_range("2024-01-01", "2024-06-30")],
-    "semestre2": [(d.month, d.day) for d in pd.date_range("2024-07-01", "2024-12-31")],
-}
+# unidade → (rótulo do eixo, dias por bloco; None = mês do calendário)
+UNIDADES = {"mensal": ("Mês", None), "semanal": ("Semana", 7), "semestre1": ("Semana do semestre", 7),
+            "semestre2": ("Semana do semestre", 7)}
+# Semestres: (primeiro mês, último mês); semanas = blocos de 7 dias a partir do 1º dia do semestre (01/01 e
+# 01/07), a última curta como a semana 53 do semanal: 26 no 1º (a 26ª com 6 ou 7 dias) e 27 no 2º (30–31/12)
+SEMESTRES = {"semestre1": (1, 6), "semestre2": (7, 12)}
+SEMANAS_SEMESTRE = {"semestre1": 26, "semestre2": 27}
 LINHAS_RESUMO = ["Mínimo", "Média", "Máximo"]
 
 
@@ -91,19 +90,17 @@ def _ano_completo(ano: int, inicio: date, fim: date) -> bool:
 
 
 def _blocos(ano: int, unidade: str) -> list[tuple[int, date, date]]:
-    """(número, primeiro dia, último dia) de cada mês/semana/dia do semestre no ano."""
+    """(número, primeiro dia, último dia) de cada mês/semana (do ano ou do semestre) no ano."""
     _, dias = UNIDADES[unidade]
     if dias is None:
         return [(m, date(ano, m, 1), date(ano, m, calendar.monthrange(ano, m)[1])) for m in range(1, 13)]
-    if dias == "dia":
-        blocos = []
-        for n, (m, d) in enumerate(DIAS_SEMESTRE[unidade], start=1):
-            if d <= calendar.monthrange(ano, m)[1]:                 # 29/02 só em ano bissexto
-                blocos.append((n, date(ano, m, d), date(ano, m, d)))
-        return blocos
-    fim_ano, blocos, inicio, n = date(ano, 12, 31), [], date(ano, 1, 1), 1
-    while inicio <= fim_ano:
-        blocos.append((n, inicio, min(inicio + timedelta(days=dias - 1), fim_ano)))
+    inicio, fim_periodo = date(ano, 1, 1), date(ano, 12, 31)
+    if unidade in SEMESTRES:
+        m0, m1 = SEMESTRES[unidade]
+        inicio, fim_periodo = date(ano, m0, 1), date(ano, m1, calendar.monthrange(ano, m1)[1])
+    blocos, n = [], 1
+    while inicio <= fim_periodo:
+        blocos.append((n, inicio, min(inicio + timedelta(days=dias - 1), fim_periodo)))
         inicio, n = inicio + timedelta(days=dias), n + 1
     return blocos
 
@@ -113,9 +110,11 @@ def numero_do_bloco(datas: pd.Series, unidade: str) -> pd.Series:
     _, dias = UNIDADES[unidade]
     if dias is None:
         return datas.dt.month
-    if dias == "dia":
-        posicao = {md: n for n, md in enumerate(DIAS_SEMESTRE[unidade], start=1)}
-        return pd.Series([posicao.get((d.month, d.day)) for d in datas], index=datas.index, dtype="float")
+    if unidade in SEMESTRES:
+        m0, m1 = SEMESTRES[unidade]
+        inicio = pd.to_datetime(pd.DataFrame({"year": datas.dt.year, "month": m0, "day": 1}))
+        semana = ((datas - inicio).dt.days // dias + 1).astype("float")
+        return semana.where(datas.dt.month.between(m0, m1))
     return (datas.dt.dayofyear - 1) // dias + 1
 
 
@@ -123,8 +122,8 @@ def rotulos_dos_blocos(unidade: str) -> list[str]:
     _, dias = UNIDADES[unidade]
     if dias is None:
         return MESES_CURTOS
-    if dias == "dia":
-        return [f"{d:02d}/{m:02d}" for m, d in DIAS_SEMESTRE[unidade]]
+    if unidade in SEMESTRES:
+        return [str(n) for n in range(1, SEMANAS_SEMESTRE[unidade] + 1)]
     return [str(n) for n in range(1, 54)]
 
 
@@ -306,10 +305,14 @@ def tabela_acumulado_exibicao(est: EstatisticasMunicipio) -> pd.DataFrame:
 
 
 def extremos_por_coluna(tabela: pd.DataFrame, linhas: list[str]) -> dict[str, tuple[set, set]]:
-    """Coluna → (linhas com o mínimo, linhas com o máximo), considerando só ``linhas`` (destaque do INPE)."""
+    """Coluna → (linhas com o mínimo, linhas com o máximo), considerando só ``linhas`` (destaque do INPE).
+
+    Zero nunca é destacado: o mínimo é o menor valor diferente de 0, e a coluna só com zeros fica sem destaque.
+    """
     resultado = {}
     for coluna in tabela.columns:
-        valores = tabela.loc[[l for l in linhas if l in tabela.index], coluna].dropna()
+        valores = tabela.loc[[linha for linha in linhas if linha in tabela.index], coluna].dropna()
+        valores = valores[valores != 0]
         if valores.empty:
             resultado[coluna] = (set(), set())
             continue
@@ -324,8 +327,8 @@ def notas(est: EstatisticasMunicipio) -> list[str]:
         f"Focos dentro do limite do território (cruzamento ponto-no-polígono), de {est.inicio_dados:%d/%m/%Y} "
         f"a {est.fim_dados:%d/%m/%Y}.",
         f"Mínimo, média e máximo usam os anos do período da análise, sem o ano de referência ({p.ano_referencia}).",
-        "Semanas são blocos de 7 dias a partir de 1º de janeiro; os semestres mostram cada dia "
-        "(1º: janeiro a junho; 2º: julho a dezembro).",
+        "Semanas são blocos de 7 dias a partir de 1º de janeiro; nos semestres (1º: janeiro a junho; 2º: julho a "
+        "dezembro), a partir do 1º dia do semestre, com a última semana mais curta.",
     ]
     if est.anos_intensidade:
         textos.append(f"Ano mais e menos intenso: entre os {len(est.anos_intensidade)} anos completos anteriores "

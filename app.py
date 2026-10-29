@@ -8,6 +8,7 @@ barra lateral → processar → ver indicadores, gráficos, mapas e tabelas → 
 """
 
 import base64
+import json
 from datetime import date, datetime
 from pathlib import Path
 
@@ -16,6 +17,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 from core import config
 from core.atualizacao import CICLO_NOWCAST_H, AtualizadorFocos, situacao_da_base, versao_da_base
@@ -33,7 +35,9 @@ from core.grade import grade_do_territorio, nota_grade
 from core.kernel import DESVIO_KERNEL_KM
 from core.graficos_estatisticas import grafico_sazonalidade
 from core.mapas import mapa_dispersao, mapa_recentes
+from core.cenario import DIAS_SEMANA, MAX_FOCOS_GEOJSON, cenario_atual, focos_no_intervalo, geojson_focos
 from core.panorama import TODAS, limite_da_regiao, panorama_estado, regioes_do_estado
+from core.relatorio_cenario import gerar_relatorio_cenario, indicadores_cenario
 from core.regioes import TIPO_IMEDIATA, TIPO_INTEGRACAO
 from core.nowcast import nowcast_territorio
 from core.produto import fechar_figuras, figuras_territorio, pacote, png
@@ -41,7 +45,7 @@ from core.territorios import (
     area_km2, areas_protegidas_no_territorio, carregar_areas_protegidas, estados_disponiveis,
     geometria_area_protegida, geometria_municipio,
 )
-from core.texto import fmt_densidade, fmt_inteiro, fmt_numero, fmt_percentual, fmt_posicao
+from core.texto import fmt_densidade, fmt_inteiro, fmt_numero, fmt_percentual, fmt_posicao, nome_arquivo
 
 st.set_page_config(
     page_title=f"{config.APP_NOME} v{config.APP_VERSAO}",
@@ -70,9 +74,13 @@ st.markdown("""
         background-color: var(--background-color, #FFFFFF);
         border-top: 1px solid var(--secondary-background-color, #CCCCCC);
         padding: 8px 30px; font-size: 12px; color: var(--text-color, #444444);
-        display: flex; justify-content: space-between; align-items: center; z-index: 999;
+        display: flex; justify-content: space-between; align-items: center; gap: 16px;
+        /* acima do painel lateral (z-index 999991 no Streamlit): o texto não é cortado quando o painel abre */
+        z-index: 999992;
     }
     .stApp { padding-bottom: 70px; }
+    /* espaço no fim do painel lateral para o rodapé fixo não cobrir os últimos botões */
+    [data-testid="stSidebarContent"] { padding-bottom: 70px; }
     @media print {
         [data-testid="stSidebar"], .stButton, .stDownloadButton, button, header, footer, .footer-container {
             display: none !important;
@@ -184,7 +192,7 @@ def opcoes_areas(caminho: str, campo: str) -> list[str]:
 def limpar_caches_da_base():
     """Depois de gravar focos novos: tudo que veio da base é recalculado."""
     for funcao in (base_focos, cobertura, diagnostico, nowcast_do_territorio, opcoes_municipios, opcoes_areas,
-                   opcoes_regioes, panorama_em_cache, figuras_panorama):
+                   opcoes_regioes, panorama_em_cache, figuras_panorama, cenario_em_cache, mapa_cenario):
         funcao.clear()
 
 
@@ -208,7 +216,9 @@ def painel_atualizacao(recarregar_ao_mudar: bool):
     """Situação da base e da busca no INPE (barra lateral); reexecuta sozinho a cada 5 s.
 
     Quando a base muda, os dados em memória são descartados; no Panorama e em Bases de dados a página
-    recarrega; no Diagnóstico só avisa, para não apagar a análise aberta.
+    recarrega; no Diagnóstico só avisa, para não apagar a análise aberta. Numa execução da página
+    inteira (clique num botão, por exemplo) a página já vem logo depois do painel com a base nova:
+    recarregar de novo descartaria o clique.
     """
     atualizador = obter_atualizador(str(config.BASES_DIR))
     estado = atualizador.instantaneo()
@@ -217,7 +227,8 @@ def painel_atualizacao(recarregar_ao_mudar: bool):
     if versao != vista and not estado["em_execucao"]:
         st.session_state["versao_base_vista"] = versao
         limpar_caches_da_base()
-        if recarregar_ao_mudar:
+        contexto = get_script_run_ctx()
+        if recarregar_ao_mudar and contexto is not None and contexto.fragment_ids_this_run:
             st.rerun(scope="app")
         st.toast("🛰️ Focos novos incorporados à base — valem para a próxima análise processada.")
 
@@ -654,10 +665,8 @@ def secao_estatisticas(focos: pd.DataFrame, nome: str, ano_inicio: int, ano_fim:
                 tabela(tabela_comparativo_exibicao(est, unidade))
     with abas[6]:
         st.altair_chart(interativo_acumulado(est), width="stretch")
-        intensos = (f"Últimos {len(est.anos_intensidade)} anos completos: mais intenso **{est.ano_mais_intenso}**, "
-                    f"menos intenso **{est.ano_menos_intenso}**." if est.anos_intensidade
-                    else "Sem anos completos antes do ano de referência para indicar o mais e o menos intenso.")
-        st.markdown(intensos)
+        if not est.anos_intensidade:
+            st.caption("Sem anos completos antes do ano de referência para indicar o mais e o menos intenso.")
         with st.expander("Ver tabela"):
             st.dataframe(tabela_acumulado_exibicao(est).style.format(lambda v: "-" if pd.isna(v) else fmt_numero(v)),
                          width="stretch")
@@ -800,6 +809,113 @@ def figuras_panorama(caminho: str, caminho_estado, estado: str, ano_inicio: int,
     return imagens
 
 
+@st.cache_resource(show_spinner=False, max_entries=8)
+def cenario_em_cache(caminho: str, estado: str, regiao: str, ultimo_dia, provisorios: tuple):
+    return cenario_atual(base_focos(caminho), estado, regiao, ultimo_dia, cobertura(caminho)[0], list(provisorios))
+
+
+@st.cache_data(show_spinner=False, max_entries=8)
+def mapa_cenario(caminho: str, caminho_estado, estado: str, regiao: str, ultimo_dia, provisorios: tuple) -> bytes:
+    cen = cenario_em_cache(caminho, estado, regiao, ultimo_dia, provisorios)
+    limite = limite_da_regiao(caminho_estado, cen.sigla_uf, cen.regiao)
+    figura = mapa_recentes(cen.nowcast.recentes(DIAS_SEMANA), limite, cen.nome, cen.dia, DIAS_SEMANA)
+    imagem = png(figura, dpi=110)
+    fechar_figuras({"mapa": figura})
+    return imagem
+
+
+def secao_cenario_estado(caminho: str, caminho_estado, estado: str, regiao: str, ano_inicio: int, ano_fim: int):
+    """Cenário atual do estado/região: últimas 24 h e última semana, com o PDF para exportar."""
+    situacao = situacao_da_base(config.BASES_DIR)
+    if situacao["ultimo_dia"] is None:
+        return
+    provisorios = tuple(situacao["provisorios"])
+    with st.spinner("Montando o cenário atual..."):
+        cen = cenario_em_cache(caminho, estado, regiao, situacao["ultimo_dia"], provisorios)
+    st.markdown(f"### 🛰️ Cenário atual — {cen.nome}: últimas 24 h e última semana")
+    st.caption(f"Últimas 24 h = passagem mais recente do satélite de referência processada pelo INPE "
+               f"(**{cen.dia:%d/%m/%Y}**{', ainda parcial' if cen.provisorio else ''}); última semana = "
+               f"{cen.inicio_semana:%d/%m} a {cen.dia:%d/%m}. Entre parênteses, a média dos mesmos dias nos anos "
+               "anteriores.")
+    indicadores = indicadores_cenario(cen)
+    for linha in (indicadores[:3], indicadores[3:]):
+        for coluna, (rotulo, valor) in zip(st.columns(3), linha):
+            coluna.metric(rotulo, valor)
+
+    c1, c2 = st.columns([1, 1.1])
+    with c1:
+        with st.spinner("Desenhando o mapa..."):
+            st.image(mapa_cenario(caminho, caminho_estado, estado, regiao, situacao["ultimo_dia"], provisorios),
+                     width="stretch")
+    with c2:
+        st.altair_chart(interativo_nowcast(cen.nowcast), width="stretch")
+        abas = st.tabs(["Municípios", "UCs e TIs", f"Focos de {cen.dia:%d/%m}"])
+        with abas[0]:
+            tabela(cen.municipios, height=260)
+        with abas[1]:
+            if cen.areas.empty:
+                st.caption("Nenhum foco em área protegida na última semana.")
+            else:
+                tabela(cen.areas, height=260)
+        with abas[2]:
+            tabela(cen.focos_24h.assign(NM_MUN=cen.focos_24h["NM_MUN"].str.title()).rename(columns={
+                "data": "Data", "NM_MUN": "Município", "regiao": "Região", "lat": "Latitude", "lon": "Longitude"}),
+                height=260)
+
+    b1, b2 = st.columns(2)
+    with b1:
+        st.markdown("**📄 Relatório do cenário (PDF)**")
+        st.caption(f"Inclui no fim as estatísticas de focos ativos de {ano_inicio}–{ano_fim} (período do filtro).")
+        chave = (estado, regiao, cen.dia, situacao["ultimo_dia"], len(cen.focos_semana), ano_inicio, ano_fim)
+        if st.button("📄 Gerar relatório do cenário (PDF)", key="cenario_gerar"):
+            with st.spinner("Gerando o relatório do cenário..."):
+                limite = limite_da_regiao(caminho_estado, cen.sigla_uf, cen.regiao)
+                pan = panorama_em_cache(caminho, estado, ano_inicio, ano_fim, regiao)
+                est = estatisticas_territorio(pan.focos, pan.nome, ano_inicio, ano_fim, cobertura(caminho))
+                st.session_state["cenario_pdf"] = (chave, *gerar_relatorio_cenario(cen, limite, est))
+        guardado = st.session_state.get("cenario_pdf")
+        if guardado and guardado[0] == chave:
+            st.download_button("⬇️ Baixar relatório do cenário (PDF)", guardado[1], file_name=guardado[2],
+                               mime="application/pdf", type="primary", on_click="ignore", key="cenario_baixar")
+    with b2:
+        exportar_focos_geojson(caminho, estado, regiao, cen)
+
+
+def exportar_focos_geojson(caminho: str, estado: str, regiao: str, cen):
+    """P29: todos os focos do estado/região entre duas datas, em GeoJSON, com os dados de cada ocorrência."""
+    st.markdown("**🗺️ Focos de calor em GeoJSON**")
+    inicio_base = cobertura(caminho)[0]
+    d1, d2 = st.columns(2)
+    inicio = d1.date_input("Data inicial", value=cen.inicio_semana, min_value=inicio_base,
+                           max_value=cen.ultimo_dia_base, format="DD/MM/YYYY", key="geo_inicio")
+    fim = d2.date_input("Data final", value=cen.dia, min_value=inicio_base, max_value=cen.ultimo_dia_base,
+                        format="DD/MM/YYYY", key="geo_fim")
+    if inicio > fim:
+        st.warning("A data inicial é depois da final.")
+        return
+    chave = (estado, regiao, inicio, fim, cen.ultimo_dia_base)
+    if st.button("🗺️ Preparar GeoJSON dos focos", key="geo_gerar"):
+        with st.spinner("Selecionando os focos..."):
+            focos = focos_no_intervalo(base_focos(caminho), estado, regiao, inicio, fim)
+            if len(focos) > MAX_FOCOS_GEOJSON:
+                st.session_state["geo_focos"] = (chave, None, len(focos))
+            else:
+                descricao = (f"Focos de calor do satélite de referência AQUA_M-T (BDQueimadas/INPE) — {cen.nome}, "
+                             f"{inicio:%d/%m/%Y} a {fim:%d/%m/%Y}. Município, UC e TI pelo cruzamento do ponto com os "
+                             f"limites oficiais. Gerado por {config.APP_NOME} v{config.APP_VERSAO}.")
+                dados = json.dumps(geojson_focos(focos, cen.tipo_regiao, descricao), ensure_ascii=False)
+                st.session_state["geo_focos"] = (chave, dados.encode("utf-8"), len(focos))
+    guardado = st.session_state.get("geo_focos")
+    if guardado and guardado[0] == chave:
+        if guardado[1] is None:
+            st.warning(f"{fmt_inteiro(guardado[2])} focos no intervalo: acima do limite de "
+                       f"{fmt_inteiro(MAX_FOCOS_GEOJSON)} por arquivo. Diminua o intervalo ou escolha uma região.")
+        else:
+            st.download_button(f"⬇️ Baixar {fmt_inteiro(guardado[2])} focos (GeoJSON)", guardado[1],
+                               file_name=f"Focos_{nome_arquivo(cen.nome)}_{inicio:%Y%m%d}_{fim:%Y%m%d}.geojson",
+                               mime="application/geo+json", type="primary", on_click="ignore", key="geo_baixar")
+
+
 def pagina_panorama():
     """Página inicial: estatísticas do estado, com filtro pelas regiões dele."""
     caminho = str(config.caminho_focos())
@@ -820,6 +936,8 @@ def pagina_panorama():
     regiao = c2.selectbox(f"Filtrar por {tipo}", [TODAS, *regioes], key="pan_regiao")
     ano_inicio, ano_fim = c3.slider("Período", min_value=anos[0], max_value=anos[-1], value=(anos[0], anos[-1]),
                                     step=1, key="pan_anos")
+    secao_cenario_estado(caminho, estados[estado], estado, regiao, ano_inicio, ano_fim)
+    st.divider()
     with st.spinner("Calculando o panorama..."):
         pan = panorama_em_cache(caminho, estado, ano_inicio, ano_fim, regiao)
     i, fim = pan.indicadores, pan.fim_dados

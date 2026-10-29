@@ -233,3 +233,40 @@ def test_panorama_do_estado():
     assert not at.exception
     assert "Região Xingu — focos de calor em 2024" in textos(at)
     assert "Estatísticas de Focos Ativos (modelo Programa Queimadas/INPE)" in textos(at)
+
+
+def test_cenario_atual_no_panorama_e_pdf():
+    at = rodar(None)
+    assert any("Cenário atual — Pará: últimas 24 h e última semana" in m.value for m in at.markdown)
+    metricas = {m.label: m.value for m in at.metric}
+    assert any(r.startswith("Últimas 24 h — passagem de 31/12/2024") for r in metricas)
+    assert not at.get("download_button")
+    at.button(key="cenario_gerar").click().run()
+    assert not at.exception
+    assert at.get("download_button")                                 # PDF pronto para baixar
+    at.selectbox(key="pan_regiao").set_value("Região Xingu").run()   # outro recorte: o PDF antigo some
+    assert not at.exception and not at.get("download_button")
+
+
+def test_exportar_focos_em_geojson():
+    """P29: focos do estado entre duas datas, em GeoJSON."""
+    import json as json_
+    from datetime import date as date_
+    at = rodar(None)
+    at.date_input(key="geo_inicio").set_value(date_(2024, 9, 1))
+    at.date_input(key="geo_fim").set_value(date_(2024, 9, 7)).run()
+    at.button(key="geo_gerar").click().run()
+    assert not at.exception
+    baixar = [d for d in at.get("download_button") if "GeoJSON" in d.proto.label]
+    assert baixar and "focos (GeoJSON)" in baixar[0].proto.label
+    chave, dados, n = at.session_state["geo_focos"]
+    assert json_.loads(dados)["type"] == "FeatureCollection" and len(json_.loads(dados)["features"]) == n > 0
+
+
+def test_base_regravada_nao_perde_o_clique():
+    """O nowcast regrava a base em segundo plano; o clique que chega junto não pode ser descartado."""
+    at = rodar(None)
+    at.session_state["versao_base_vista"] = -1                       # base mudou desde a última vez
+    at.button(key="cenario_gerar").click().run()
+    assert not at.exception and at.get("download_button")
+    assert at.session_state["versao_base_vista"] != -1

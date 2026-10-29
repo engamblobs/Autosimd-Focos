@@ -9,6 +9,13 @@ O programa abre direto com a base local. A busca de focos novos no INPE roda em 
 ```text
 🏠 Panorama do Estado          ← página inicial (docs/07 §10)
    ├── Filtros: estado (padrão Pará) · região (Integração no PA, Geográfica Imediata nos demais; "Todas") · período
+   ├── 🛰️ Cenário atual — últimas 24 h e última semana (docs/07 §11; independe do período)
+   │   ├── 6 indicadores: últimas 24 h e semana (com a média), municípios com focos, focos em UCs/TIs,
+   │   │   no ano até o dia, últimos 30 dias
+   │   ├── Mapa dos focos da semana sobre satélite · gráfico interativo dos últimos 30 dias
+   │   ├── Abas: Municípios · UCs e TIs · Focos do dia da passagem
+   │   ├── 📄 Gerar relatório do cenário (PDF) → ⬇️ Baixar (docs/10 §8; estatísticas do período no fim)
+   │   └── 🗺️ Focos em GeoJSON: data inicial e final → Preparar → ⬇️ Baixar (P29)
    ├── 6 indicadores: focos no ano final até a data dos dados (× ano anterior), mesmo período do ano anterior,
    │   média do mesmo período, últimos 7 e 30 dias, municípios com focos
    ├── Mapa de kernel do ano final (estado ou região) · focos por ano (interativo) · sazonalidade

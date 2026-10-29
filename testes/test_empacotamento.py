@@ -87,6 +87,13 @@ def test_identificacao_do_servidor(pacote):
     assert iniciar.ICONE.replace("\\", "/").endswith("referencia/logos/AutoSIMD-FOCOS.ico")
 
 
+def test_atalho_com_a_versao(pacote):
+    iniciar = carregar("iniciar")
+    assert iniciar.versao_do_programa(str(pacote)) == config.APP_VERSAO
+    assert iniciar.nome_do_atalho(str(pacote)) == f"AutoSIMD-FOCOS v{config.APP_VERSAO}"
+    assert iniciar.nome_do_atalho(str(pacote / "nao_existe")) == "AutoSIMD-FOCOS"
+
+
 def test_versoes_do_windows_iguais_as_do_desenvolvimento():
     """Os wheels do pacote têm as mesmas versões testadas no ambiente de desenvolvimento."""
     linhas = (EMPACOTAMENTO / "requirements-windows.txt").read_text(encoding="utf-8").splitlines()
@@ -105,3 +112,23 @@ def test_controle_da_atualizacao_vai_no_pacote_se_existir(empacotar, tmp_path):
     empacotar.montar_bases(tmp_path / "pacote", origem)
     assert (tmp_path / "pacote" / "BASES_GEOJSON" / "atualizacao_inpe.json").exists()
     assert not (tmp_path / "pacote" / "BASES_GEOJSON" / "bdqueimadas_consolidado.anterior.parquet").exists()
+
+
+def test_trava_tem_as_versoes_fixadas_com_sha256(empacotar):
+    """requirements-windows.lock acompanha requirements-windows.txt e traz o SHA256 de cada wheel."""
+    travadas = empacotar.ler_fixadas(empacotar.TRAVA)
+    for nome, versao in empacotar.ler_fixadas(empacotar.REQUISITOS).items():
+        assert travadas.get(nome) == versao, nome
+    linhas = [l for l in empacotar.TRAVA.read_text(encoding="utf-8").splitlines() if l and not l.startswith("#")]
+    assert linhas and all(re.fullmatch(r"\S+==\S+ --hash=sha256:[0-9a-f]{64}", l) for l in linhas)
+
+
+def test_python_portatil_conferido_pelo_sha256(empacotar):
+    assert re.fullmatch(r"[0-9a-f]{64}", empacotar.PYTHON_EMBED_SHA256)
+    if empacotar.PYTHON_EMBED_ZIP.exists():                 # cache local (fora do git)
+        assert empacotar.sha256(empacotar.PYTHON_EMBED_ZIP) == empacotar.PYTHON_EMBED_SHA256
+
+
+def test_leia_me_ensina_a_conferir_o_zip(pacote, empacotar):
+    leia_me = (pacote / "LEIA-ME.txt").read_text(encoding="utf-8")
+    assert f"Get-FileHash .\\{empacotar.NOME}_v{config.APP_VERSAO}.zip" in leia_me

@@ -66,8 +66,8 @@ def conteudo(pacote_) -> zipfile.ZipFile:
 
 def test_grade_ajustada_a_latitude():
     """P8: 10 km nos dois eixos, em qualquer latitude."""
-    norte = grade_do_territorio((-55.0, -1.0, -54.0, 1.0))            # Equador
-    sul = grade_do_territorio((-53.0, -31.0, -52.0, -29.0))           # −30°
+    norte = grade_do_territorio((-55.0, -1.0, -54.0, 1.0), 10)        # Equador
+    sul = grade_do_territorio((-53.0, -31.0, -52.0, -29.0), 10)       # −30°
     assert norte.passo_y == pytest.approx(sul.passo_y)
     assert norte.passo_x == pytest.approx(10 / 111.32, rel=1e-3)
     assert sul.passo_x == pytest.approx(10 / (111.32 * math.cos(math.radians(-30))), rel=1e-3)
@@ -78,12 +78,36 @@ def test_grade_ajustada_a_latitude():
 
 
 def test_contagem_e_recorrencia():
-    grade = grade_do_territorio((0.0, 0.0, 0.3, 0.3))
+    grade = grade_do_territorio((0.0, 0.0, 0.3, 0.3), 10)
     lons, lats, anos = [0.01, 0.02, 0.01, 0.25], [0.01, 0.01, 0.02, 0.25], [2020, 2020, 2021, 2021]
     total = contagem(grade, lons, lats)
     assert total.sum() == 4 and total.max() == 3
     assert recorrencia(grade, lons, lats, anos).max() == 2       # célula com fogo em 2020 e 2021
     assert contagem(grade, [], []).sum() == 0
+
+
+def test_grade_proporcional_ao_territorio():
+    """Célula = 10 km ÷ 1, 2, 4 ou 8, para o lado maior ter ~51 células (São Félix do Xingu-PA com 10 km)."""
+    def celula(largura_km, altura_km, lat=-5.0):
+        dx = largura_km / (111.32 * math.cos(math.radians(lat)))
+        return grade_do_territorio((-50.0, lat - altura_km / 221.148, -50.0 + dx, lat + altura_km / 221.148)).tamanho_km
+    assert celula(304, 511, -7.5) == 10            # São Félix do Xingu: referência
+    assert celula(440, 736) == 10                  # maior que a referência: não passa de 10 km
+    assert celula(296, 153) == 5                   # Marabá: largo, conta o lado maior
+    assert celula(26, 50) == 1.25                  # Maracanã
+    assert celula(10, 16) == 1.25                  # Marituba: mínimo de 1,25 km
+    grade = grade_do_territorio((-48.0, -1.0, -47.76, -0.55))
+    assert grade.tamanho_km == 1.25 and grade.passo_y == pytest.approx(1.25 / 110.574)
+    assert 30 <= max(grade.forma) <= 60
+    assert "1,25 km × 1,25 km (10 km ÷ 8" in nota_grade(grade)
+
+
+def test_kernel_em_territorio_menor_que_o_filtro():
+    """APA Pedregulho (~16 × 8 km): o raster tem menos células que a gaussiana (antes: erro de formato)."""
+    territorio = box(-47.26, -23.262, -47.116, -23.186)
+    k = densidade_kernel([-47.2, -47.15], [-23.22, -23.2], territorio.bounds, territorio)
+    assert k.densidade.shape == (len(k.y) - 1, len(k.x) - 1)
+    assert np.nansum(k.densidade) > 0
 
 
 def test_kernel_conserva_os_focos():
@@ -130,9 +154,9 @@ def test_pacote_municipio(municipio):
     nomes = set(conteudo(pacote_).namelist())
     assert {
         "relatorio_diagnostico_NOVO_PROGRESSO_2023_2024.pdf", "estatisticas_NOVO_PROGRESSO_2023_2024.xlsx",
-        "dados_MUN_NOVO_PROGRESSO.csv", "metadados.json", "grade_10x10km_NOVO_PROGRESSO.geojson",
+        "dados_MUN_NOVO_PROGRESSO.csv", "metadados.json", "grade_10x10km_NOVO_PROGRESSO.geojson", "grade_5x5km_NOVO_PROGRESSO.geojson",
         "ranking_municipios.csv", "ranking_ucs.csv", "ranking_tis.csv",
-        "nowcast/Nowcast_Ultimos_30_Dias.csv", "nowcast/Nowcast_Focos_Recentes.csv",
+        "nowcast/Nowcast_Ultimos_30_Dias.csv", "nowcast/Nowcast_Ultimas_52_Semanas.csv", "nowcast/Nowcast_Focos_Recentes.csv",
     } <= nomes
     assert {f"imagens/{n}_NOVO_PROGRESSO.png" for n in NOMES_PNG.values()} <= nomes
     assert {f"estatisticas/0{i}_{n}.csv" for i, n in enumerate(
@@ -161,7 +185,7 @@ def test_planilha(municipio):
     assert list(planilhas) == ["Evolucao_Historica", "Sazonalidade_Mensal", "Focos_Mes_a_Mes", "Focos_Dia_a_Dia",
                                "Comparativo_Mensal", "Comparativo_Semanal", "Comparativo_1o_Semestre",
                                "Comparativo_2o_Semestre", "Acumulado_Mensal", "Notas_Estatisticas",
-                               "Nowcast_Ultimos_30_Dias", "Nowcast_Focos_Recentes", "Nowcast_Indicadores"]
+                               "Nowcast_Ultimos_30_Dias", "Nowcast_Ultimas_52_Semanas", "Nowcast_Focos_Recentes", "Nowcast_Indicadores"]
     assert planilhas["Evolucao_Historica"]["Focos"].tolist() == [1136, 4787]
     sazonal = planilhas["Sazonalidade_Mensal"]
     assert list(sazonal.columns) == ["Mês", "Média", "p10", "p90", "2024"]
@@ -248,3 +272,18 @@ def test_fonte_de_imagem_aberta():
     assert "CC BY-NC-SA 4.0" in config.CREDITO_SATELITE
     assert all(marcador in config.URL_SATELITE for marcador in ("{x}", "{y}", "{z}"))
 
+
+
+def test_texto_dos_dados_nao_vira_formula_no_excel(tmp_path):
+    """Texto que começa com "=" (ex.: nome vindo de uma base externa) fica como texto na planilha."""
+    import openpyxl
+
+    from core.texto import neutralizar_formulas
+
+    caminho = tmp_path / "planilha.xlsx"
+    with pd.ExcelWriter(caminho, engine="openpyxl") as planilha:
+        pd.DataFrame({"nome": ['=HYPERLINK("http://exemplo.invalido","clique")', "Belém"]}).to_excel(planilha, index=False)
+        neutralizar_formulas(planilha.book)
+    celulas = [c for linha in openpyxl.load_workbook(caminho).active.iter_rows() for c in linha]
+    assert [c.data_type for c in celulas] == ["s", "s", "s"]
+    assert celulas[1].value.startswith("=HYPERLINK")

@@ -11,7 +11,7 @@ Mesmo conteúdo para município, UC e TI (P7), montado em memória e baixado pel
 | Nome do pacote | `Diagnostico_MUN_<alvo>_<p>.zip` | `Diagnostico_UC_<alvo>_<p>.zip` / `Diagnostico_TI_…` |
 | `relatorio_diagnostico_<alvo>_<p>.pdf` | ✔ (§4) | ✔ (§4) |
 | `estatisticas_<alvo>_<p>.xlsx` | ✔ | ✔ (sem as abas do nowcast) |
-| `grade_10x10km_<alvo>.geojson` | ✔ | ✔ |
+| `grade_10x10km_<alvo>.geojson` (sempre) + `grade_<L>x<L>km_<alvo>.geojson` (proporcional, L = 5, 2.5 ou 1.25; P31, `docs/07` §4) | ✔ | ✔ |
 | `dados_<MUN|UC|TI>_<alvo>.csv` | ✔ focos do município | ✔ focos da área |
 | `ranking_municipios.csv`, `ranking_ucs.csv`, `ranking_tis.csv` | ✔ do estado no período | ✔ dentro da área |
 | `metadados.json` | ✔ com UF, tipo de região, região, data do nowcast | ✔ com a UF predominante |
@@ -39,7 +39,7 @@ Campos de cada arquivo em `docs/06` §4. PNGs a 180 dpi. Com a base completa (20
 Regras em `docs/07` §4–§6. Limite do território em azul `#1E88E5`; UC em verde `#2E7D32` (contínuo), TI em marrom `#8D4E00` (tracejado). Eixos em graus, com a proporção real da latitude.
 
 - **Kernel (mapas 1, 2, 4):** escala de amarelo-claro a vinho, em focos por 100 km²; cada foco como pequena cruz cinza quase transparente (até 2.000 focos no mapa; acima disso não são desenhadas); nota com o desvio do kernel, o tamanho da célula e se os focos estão marcados.
-- **Recorrência (mapa 3):** grade de 10 km ajustada à latitude, escala plasma, nota sobre o ajuste.
+- **Recorrência (mapa 3):** grade proporcional ao território (10, 5, 2,5 ou 1,25 km, `docs/07` §4) ajustada à latitude, tamanho no título, escala plasma, nota sobre o ajuste.
 - **Cenário atual:** imagem de satélite **Sentinel-2 cloudless 2024** da EOX (licença CC BY-NC-SA 4.0, tiles XYZ, `core/fundo_satelite.py`; fonte em `core/config.py`, P22), limite em ciano, UC verde-limão e TI laranja; focos com contorno preto, cor pela idade (último dia `#FF1744`, 1–2 dias `#FF9100`, 3–6 dias `#FFEA00`, 7–29 dias `#E0E0E0`); crédito "Imagem: Sentinel-2 cloudless 2024 (s2maps.eu) por EOX IT Services GmbH, CC BY-NC-SA 4.0 — contém dados Copernicus Sentinel modificados (2024)". Sem internet: sem imagem, com aviso.
 
 ## 4. PDF do diagnóstico (`core/relatorio_pdf.py`)
@@ -59,7 +59,7 @@ Regras em `docs/07` §8. Os mesmos dados aparecem em 4 formas: tela (tabelas + g
 
 | Item | Tela | PDF / PNG |
 |---|---|---|
-| Mês a mês (ano × mês, mínimo, média, máximo) | Tabela com destaques | Tabela com destaques (amarelo `#FFD54F` = menor, vermelho `#E53935` = maior; linhas de resumo `#FBC02D`/`#FB8C00`/`#E53935`) |
+| Mês a mês (ano × mês, mínimo, média, máximo) | Tabela com destaques | Tabela com destaques (amarelo `#FFD54F` = menor diferente de 0, vermelho `#E53935` = maior; zero não é destacado; linhas de resumo `#FBC02D`/`#FB8C00`/`#E53935`) |
 | Dia a dia (mês escolhido, ano de referência e anterior) | Tabela | Tabela em duas partes |
 | Comparativo mensal, semanal, 1º semestre, 2º semestre | Barras do ano de referência (azul) + linhas máximo (vermelho), média (laranja), mínimo (verde); dica, zoom horizontal, legenda clicável; tabela em "Ver tabela" | Mesmo gráfico (matplotlib) |
 | Acumulado mensal | Linhas cinza de cada ano, faixa cinza dos percentis, média (laranja), ano de referência (azul), anterior (roxo), mais intenso (vermelho tracejado), menos intenso (verde tracejado) | Mesmo gráfico |
@@ -83,3 +83,20 @@ Regras em `docs/07` §9. Na tela: 5 indicadores (vermelho quando acima da média
 | Resultados sumiam ao clicar em baixar | Botões não recarregam a página |
 | GeoJSON de UC (108 MB) relido a cada clique | Lido uma vez |
 | UC/TI sem PDF nem Excel | Mesmo pacote do município (P7) |
+
+## 8. PDF do cenário atual do estado (`core/relatorio_cenario.py`)
+
+Botão **📄 Gerar relatório do cenário (PDF)** no Panorama do Estado; depois aparece **⬇️ Baixar** (some quando muda o estado, a região ou a base). Arquivo `Cenario_Focos_<Estado ou Região>_<AAAAMMDD da passagem>.pdf`, no padrão visual do PDF do diagnóstico (cabeçalho com logos, rodapé "Página X de Y"):
+
+1. Indicadores (os mesmos 6 da tela) e nota com as definições (`docs/07` §11, texto justificado), data de geração e último dia buscado;
+2. Mapa dos focos da última semana sobre o Sentinel-2 cloudless, cor pela idade, centralizado, com a legenda centralizada abaixo do mapa;
+3. Focos por dia nos últimos 30 dias e **por semana nas últimas 52 semanas** × máximo e média da mesma semana nos anos anteriores;
+4. **Gráficos dos focos analisados:** focos por dia na semana (fora de áreas protegidas / em UC / em TI, empilhados), focos da semana por região (só no estado inteiro, com a parte das 24 h) e os 15 municípios com mais focos na semana;
+5. **Recorrência do mês × focos atuais:** grade proporcional (`docs/07` §4) com o nº de anos em que cada célula teve foco no mês da passagem (anos comparados do nowcast) e os focos da semana por cima; leitura com a % dos focos em células com histórico no mês e em células com foco em pelo menos metade dos anos;
+6. Municípios com focos na semana (até 40), UCs e TIs com focos na semana (até 20) — a lista dos focos das 24 h saiu (P29: o GeoJSON a substitui);
+7. Nota de fontes e canais de atendimento;
+8. **Estatísticas de focos ativos** (modelo INPE, a mesma seção do PDF do diagnóstico, §5) do estado/região no período do filtro do Panorama, com os parâmetros padrão.
+
+Ao lado do PDF, **🗺️ Focos de calor em GeoJSON** (P29): data inicial e final (padrão = a última semana), **Preparar GeoJSON** e **Baixar**: todos os focos do estado/região no intervalo, com os campos de `docs/06`. Acima de 200.000 focos a tela pede um intervalo menor.
+
+No PDF do diagnóstico (§4), a seção do cenário atual também ganhou o gráfico das últimas 52 semanas, abaixo do de 30 dias (PNG `imagens/cenario_atual_ultimas_52_semanas_<alvo>.png` e aba `Nowcast_Ultimas_52_Semanas` no Excel). Em todos os PDFs, as notas são justificadas.
