@@ -12,8 +12,9 @@ import json
 from datetime import date, datetime
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import altair as alt
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
@@ -30,22 +31,33 @@ from core.estatisticas import (
 from core.focos import (
     anos_disponiveis, areas_com_focos, carregar_focos, focos_da_area, focos_do_municipio, municipios_da_uf,
 )
-from core.graficos_estatisticas import interativo_acumulado, interativo_comparativo, interativo_nowcast
+from core.graficos_estatisticas import (
+    interativo_acumulado, interativo_comparativo, interativo_nowcast, interativo_nowcast_semanal,
+)
 from core.grade import grade_do_territorio, nota_grade
 from core.kernel import DESVIO_KERNEL_KM
 from core.graficos_estatisticas import grafico_sazonalidade
 from core.mapas import mapa_dispersao, mapa_recentes
-from core.cenario import DIAS_SEMANA, MAX_FOCOS_GEOJSON, cenario_atual, focos_no_intervalo, geojson_focos
-from core.panorama import TODAS, limite_da_regiao, panorama_estado, regioes_do_estado
-from core.relatorio_cenario import gerar_relatorio_cenario, indicadores_cenario
+from core.cenario import (
+    DIAS_SEMANA, MAX_FOCOS_GEOJSON, MESES_EXTENSO, cenario_atual, focos_do_recorte, focos_no_intervalo,
+    geojson_focos, recorrencia_do_mes, texto_do_cenario,
+)
+from core.panorama import (
+    TODAS, TOP_MUNICIPIOS, estatisticas_dos_municipios, limite_da_regiao, panorama_estado, regioes_do_estado,
+)
+from core.relatorio_cenario import (
+    anomalias_do_cenario, gerar_relatorio_cenario, indicadores_cenario, pacote_cenario,
+)
+from core.anomalias import TIPOS as TIPOS_ANOMALIA, texto_metodologia_markdown
 from core.regioes import TIPO_IMEDIATA, TIPO_INTEGRACAO
 from core.nowcast import nowcast_territorio
-from core.produto import fechar_figuras, figuras_territorio, pacote, png
+from core.produto import fechar_figuras, figuras_anomalias, figuras_territorio, pacote, png
 from core.territorios import (
     area_km2, areas_protegidas_no_territorio, carregar_areas_protegidas, estados_disponiveis,
-    geometria_area_protegida, geometria_municipio,
+    geometria_area_protegida, geometria_municipio, municipios_simplificados,
 )
-from core.texto import fmt_densidade, fmt_inteiro, fmt_numero, fmt_percentual, fmt_posicao, nome_arquivo
+from core.texto import chave_nome, fmt_densidade, fmt_inteiro, fmt_numero, fmt_percentual, fmt_posicao, nome_arquivo
+from core.mapa_interativo import ALTURA_PX, deck_focos_recentes, legenda, municipio_clicado
 
 st.set_page_config(
     page_title=f"{config.APP_NOME} v{config.APP_VERSAO}",
@@ -67,6 +79,8 @@ st.markdown("""
     .main-header { text-align: center; font-family: Arial, sans-serif; line-height: 1.4; margin-bottom: 25px; }
     .main-header h2 { font-size: 22px; margin: 0; font-weight: bold; }
     .main-header h3 { font-size: 17px; margin: 2px 0; font-weight: normal; }
+    /* linhas próximas até o nome do projeto: o Streamlit põe espaçamento próprio nos títulos */
+    .main-header h2, .main-header h3 { padding: 0 !important; margin: 0 !important; line-height: 1.25 !important; }
     .main-header .sub { font-size: 18px; margin-top: 6px; color: #E53935; font-weight: bold; }
     .main-header .ref { font-size: 24px; margin-top: 4px; color: #1E88E5; font-weight: bold; }
     .footer-container {
@@ -117,7 +131,8 @@ def render_header(subtitulo: str = ""):
                 <h2>Corpo de Bombeiros Militar do Pará</h2>
                 <h3>Coordenadoria Estadual de Proteção e Defesa Civil</h3>
                 <h3>Divisão de Gestão de Risco - DGR</h3>
-                <h2><b>{config.APP_NOME}</b></h2>
+                <h3>Sala de Informações e Monitoramento de Desastres (SIMD)</h3>
+                <h2><b>{config.APP_NOME} v{config.APP_VERSAO}</b></h2>
                 <div class="sub">DIAGNÓSTICO AUTOMÁTICO DE FOCOS DE CALOR</div>
                 <div class="ref">{subtitulo.upper()}</div>
             </div>
@@ -192,7 +207,8 @@ def opcoes_areas(caminho: str, campo: str) -> list[str]:
 def limpar_caches_da_base():
     """Depois de gravar focos novos: tudo que veio da base é recalculado."""
     for funcao in (base_focos, cobertura, diagnostico, nowcast_do_territorio, opcoes_municipios, opcoes_areas,
-                   opcoes_regioes, panorama_em_cache, figuras_panorama, cenario_em_cache, mapa_cenario):
+                   opcoes_regioes, panorama_em_cache, figuras_panorama, cenario_em_cache, recorrencia_do_cenario,
+                   anomalias_cenario_png):
         funcao.clear()
 
 
@@ -266,6 +282,27 @@ def tabela(df: pd.DataFrame, **kwargs):
     st.dataframe(df, hide_index=True, width="stretch", **kwargs)
 
 
+COR_RECORDE = "background-color: #B71C1C; color: white; font-weight: bold"
+
+
+def tabela_com_recordes(df: pd.DataFrame, recordes: pd.DataFrame | None, anos: tuple[int, int] | None,
+                        altura: int | None = None):
+    """Tabela com as células acima da máxima histórica (mesmas datas dos anos anteriores) em vermelho."""
+    extra = {"height": altura} if altura else {}
+    if recordes is None or df.empty or not recordes.to_numpy().any():
+        tabela(df, **extra)
+        if recordes is not None and anos:
+            st.caption(f"Nenhum valor acima da máxima histórica das mesmas datas ({anos[0]}–{anos[1]}).")
+        return
+    cores = pd.DataFrame(np.where(recordes.to_numpy(dtype=bool), COR_RECORDE, ""), index=df.index, columns=df.columns)
+    estilo = df.style.apply(lambda _: cores, axis=None)
+    tabela(estilo.format({c: fmt_numero for c in df.select_dtypes("number").columns if "%" not in c})
+           .format({c: lambda v: fmt_numero(v, 1) for c in df.columns if "%" in c}), **extra)
+    st.markdown(f'<span style="background:#B71C1C;color:white;padding:1px 6px;font-weight:bold">valor</span> '
+                f"acima da máxima histórica das mesmas datas em {anos[0]}–{anos[1]} (ano até a data, último mês e "
+                "última semana).", unsafe_allow_html=True)
+
+
 def disparar_download_automatico(conteudo: bytes, nome: str):
     """Inicia o download no navegador sem clique (opção da barra lateral)."""
     b64 = base64.b64encode(conteudo).decode()
@@ -314,7 +351,7 @@ def parametros_analise(df: pd.DataFrame) -> dict | None:
     """Controles da barra lateral; None se faltar base de municípios."""
     caminho = str(config.caminho_focos())
     st.sidebar.title("🛠️ Parâmetros da Análise")
-    tipo = st.sidebar.radio("🎯 Escolha o Nível de Análise:", config.TIPOS_ANALISE)
+    tipo = st.sidebar.radio("🎯 Escolha o Nível de Análise:", config.TIPOS_ANALISE, key="diag_tipo")
     p = {"tipo": tipo, "estado": None, "caminho_estado": None}
 
     if tipo == config.TIPO_MUNICIPIO:
@@ -323,11 +360,15 @@ def parametros_analise(df: pd.DataFrame) -> dict | None:
             st.sidebar.error(f"Nenhum arquivo GeoJSON de estado encontrado em {config.pasta_municipios()}.")
             return None
         nomes_estados = list(estados)
-        p["estado"] = st.sidebar.selectbox("Selecione o Estado (UF):", nomes_estados,
-                                           index=nomes_estados.index("Pará") if "Pará" in estados else 0)
+        if st.session_state.get("diag_estado") not in estados:     # padrão Pará (o clique no mapa também escolhe)
+            st.session_state["diag_estado"] = "Pará" if "Pará" in estados else nomes_estados[0]
+        p["estado"] = st.sidebar.selectbox("Selecione o Estado (UF):", nomes_estados, key="diag_estado")
         p["caminho_estado"] = estados[p["estado"]]
         municipios = opcoes_municipios(caminho, p["estado"])
-        p["nome"] = st.sidebar.selectbox("📍 Selecione o Município:", municipios or ["SELECIONE"])
+        if st.session_state.get("diag_municipio") not in (municipios or ["SELECIONE"]):
+            st.session_state.pop("diag_municipio", None)      # outro estado: volta ao primeiro município
+        p["nome"] = st.sidebar.selectbox("📍 Selecione o Município:", municipios or ["SELECIONE"],
+                                         key="diag_municipio")
     else:
         rotulo = ("🌲 Selecione a Unidade de Conservação (UC):" if tipo == config.TIPO_UC
                   else "🏹 Selecione a Terra Indígena (TI):")
@@ -341,6 +382,8 @@ def parametros_analise(df: pd.DataFrame) -> dict | None:
     p["download_automatico"] = st.sidebar.checkbox(
         "Baixar automaticamente o pacote completo (Relatório PDF, Metadados e Imagens PNG)", value=True)
     p["processar"] = st.sidebar.button("🚀 Processar Diagnóstico Completo", type="primary", width="stretch")
+    if st.session_state.pop("processar_pelo_mapa", False):     # clique num município do mapa interativo
+        p["processar"], p["download_automatico"] = True, False
     return p
 
 
@@ -443,6 +486,8 @@ def mostrar_territorio(df: pd.DataFrame, p: dict):
         resumo_municipio(diag, p)
     else:
         resumo_area(diag)
+    st.markdown("#### 🧭 Localização")
+    mostrar_figura(figuras["localizacao"], st.columns([3, 1])[0])
     if nowcast is not None:
         st.divider()
         secao_nowcast(diag, nowcast)
@@ -488,6 +533,7 @@ def mostrar_territorio(df: pd.DataFrame, p: dict):
     if figuras["mapa_trimestral"] is not None:
         st.markdown("#### 🔄 Migração Espacial Sazonal (densidade de kernel por trimestre)")
         mostrar_figura(figuras["mapa_trimestral"])
+    mostrar_anomalias({tipo: figuras.get(f"anomalia_{tipo}") for tipo in TIPOS_ANOMALIA}, diag.municipio)
 
     rankings_areas(diag)
 
@@ -601,9 +647,10 @@ def parametros_do_relatorio(chave: tuple) -> ParametrosEstatisticas:
     return guardado[1] if guardado and guardado[0] == chave else ParametrosEstatisticas()
 
 
-def estilo_inpe(tabela_: pd.DataFrame, linhas_destaque: list[str]):
-    """Menor valor de cada coluna em amarelo e maior em vermelho; linhas Mínimo/Média/Máximo coloridas."""
-    extremos = extremos_por_coluna(tabela_, linhas_destaque)
+def estilo_inpe(tabela_: pd.DataFrame, linhas_destaque: list[str], recorde: str | None = None):
+    """Menor valor de cada coluna em amarelo e maior em vermelho (o ano ``recorde`` quando passa da máxima);
+    linhas Mínimo/Média/Máximo coloridas."""
+    extremos = extremos_por_coluna(tabela_, linhas_destaque, recorde)
 
     def cores(coluna):
         minimos, maximos = extremos[coluna.name]
@@ -652,7 +699,8 @@ def secao_estatisticas(focos: pd.DataFrame, nome: str, ano_inicio: int, ano_fim:
     abas = st.tabs(["Mês a mês", "Dia a dia", *ABAS_COMPARATIVOS, "Acumulado mensal"])
     with abas[0]:
         st.markdown(f"**Total de focos detectados em cada mês ({ano_inicio}–{ano_fim})**")
-        st.dataframe(estilo_inpe(tabela_mensal_exibicao(est), [str(a) for a in est.anos_estatistica]),
+        st.dataframe(estilo_inpe(tabela_mensal_exibicao(est), [str(a) for a in est.anos_estatistica],
+                                 str(est.ano_referencia)),
                      width="stretch", height=min(40 + 35 * (len(est.mensal) + 3), 900))
     with abas[1]:
         st.markdown(f"**Total de focos detectados dia a dia — {MESES_TABELA[est.parametros.mes_diario - 1]}**")
@@ -688,6 +736,22 @@ def secao_estatisticas(focos: pd.DataFrame, nome: str, ano_inicio: int, ano_fim:
 
 # ------------------------------------------------------------------ Páginas
 
+def mapa_do_estado(estado: str):
+    """Abertura do Diagnóstico: focos da última semana no estado, com a recorrência do mês; clique = diagnóstico."""
+    caminho = str(config.caminho_focos())
+    situacao = situacao_da_base(config.BASES_DIR)
+    caminho_estado = estados_disponiveis().get(estado)
+    if situacao["ultimo_dia"] is None or caminho_estado is None:
+        return
+    provisorios = tuple(situacao["provisorios"])
+    with st.spinner("Montando o mapa do estado..."):
+        cen = cenario_em_cache(caminho, estado, TODAS, situacao["ultimo_dia"], provisorios)
+        rec = recorrencia_do_cenario(caminho, caminho_estado, estado, TODAS, situacao["ultimo_dia"], provisorios)
+    st.markdown(f"### 🗺️ {estado}: focos de {cen.inicio_semana:%d/%m} a {cen.dia:%d/%m/%Y}")
+    mostrar_mapa_interativo("mapa_abertura", cen.nowcast.recentes(DIAS_SEMANA),
+                            limite_da_regiao(caminho_estado, cen.sigla_uf, None), estado, rec)
+
+
 def pagina_diagnostico():
     df = base_focos(str(config.caminho_focos()))
     if df.empty:
@@ -708,7 +772,8 @@ def pagina_diagnostico():
             del st.session_state[chave]          # controles das estatísticas voltam ao padrão
     if st.session_state.get("analise") != chave_analise(p):
         st.info("👈 Defina o território e o período no painel à esquerda e clique em "
-                "**Processar Diagnóstico Completo**.")
+                "**Processar Diagnóstico Completo** — ou clique num município do mapa.")
+        mapa_do_estado(p.get("estado") or "Pará")
     else:
         mostrar_territorio(df, p)
 
@@ -809,19 +874,57 @@ def figuras_panorama(caminho: str, caminho_estado, estado: str, ano_inicio: int,
     return imagens
 
 
+# ------------------------------------------------------------ Mapa interativo
+
+PAGINA_DIAGNOSTICO = "🔥 Diagnóstico"
+
+
+def municipio_do_mapa(nome: str, opcoes: list[str]) -> str | None:
+    """Opção da barra lateral que corresponde ao município clicado (nomes do IBGE × da base)."""
+    return next((o for o in opcoes if chave_nome(o) == chave_nome(nome)), None)
+
+
+def abrir_diagnostico_do_mapa(chave: str, estado: str):
+    """Callback do clique no mapa: escolhe o município na barra lateral e processa o diagnóstico."""
+    nome = municipio_clicado(st.session_state.get(chave))
+    if not nome:
+        return
+    escolhido = municipio_do_mapa(nome, opcoes_municipios(str(config.caminho_focos()), estado))
+    if escolhido is None:
+        st.session_state["aviso_mapa"] = f"{nome}: nenhum foco na base — não há diagnóstico para abrir."
+        return
+    st.session_state.update(navegacao=PAGINA_DIAGNOSTICO, diag_tipo=config.TIPO_MUNICIPIO, diag_estado=estado,
+                            diag_municipio=escolhido, processar_pelo_mapa=True)
+
+
+def mostrar_mapa_interativo(chave: str, recentes, territorio, estado: str | None, rec=None):
+    """Focos recentes sobre satélite, quadrícula de recorrência do mês e limites municipais clicáveis."""
+    caminho_estado = estados_disponiveis().get(estado) if estado else None
+    municipios = municipios_simplificados(Path(caminho_estado)) if caminho_estado else ()
+    deck = deck_focos_recentes(recentes, territorio, municipios, rec, config.FUNDO_SATELITE)
+    st.pydeck_chart(deck, height=ALTURA_PX, key=chave, selection_mode="single-object",
+                    on_select=(lambda: abrir_diagnostico_do_mapa(chave, estado)) if estado else "ignore")
+    itens = legenda(recentes, rec)
+    st.markdown(" &nbsp; ".join(f'<span style="display:inline-block;width:11px;height:11px;background:{cor};'
+                                f'border:1px solid #555;margin-right:4px"></span>{texto}' for cor, texto in itens),
+                unsafe_allow_html=True)
+    st.caption("Role para aproximar, arraste para mover; passe o mouse num foco para ver a data"
+               + (" e **clique num município para abrir o diagnóstico dele**." if estado else ".")
+               + " Imagem: Sentinel-2 cloudless 2024 (EOX, CC BY-NC-SA 4.0).")
+    if aviso := st.session_state.pop("aviso_mapa", None):
+        st.warning(aviso)
+
+
+@st.cache_resource(show_spinner=False, max_entries=8)
+def recorrencia_do_cenario(caminho: str, caminho_estado, estado: str, regiao: str, ultimo_dia, provisorios: tuple):
+    cen = cenario_em_cache(caminho, estado, regiao, ultimo_dia, provisorios)
+    limite = limite_da_regiao(caminho_estado, cen.sigla_uf, cen.regiao)
+    return recorrencia_do_mes(cen, limite.bounds) if limite is not None else None
+
+
 @st.cache_resource(show_spinner=False, max_entries=8)
 def cenario_em_cache(caminho: str, estado: str, regiao: str, ultimo_dia, provisorios: tuple):
     return cenario_atual(base_focos(caminho), estado, regiao, ultimo_dia, cobertura(caminho)[0], list(provisorios))
-
-
-@st.cache_data(show_spinner=False, max_entries=8)
-def mapa_cenario(caminho: str, caminho_estado, estado: str, regiao: str, ultimo_dia, provisorios: tuple) -> bytes:
-    cen = cenario_em_cache(caminho, estado, regiao, ultimo_dia, provisorios)
-    limite = limite_da_regiao(caminho_estado, cen.sigla_uf, cen.regiao)
-    figura = mapa_recentes(cen.nowcast.recentes(DIAS_SEMANA), limite, cen.nome, cen.dia, DIAS_SEMANA)
-    imagem = png(figura, dpi=110)
-    fechar_figuras({"mapa": figura})
-    return imagem
 
 
 def secao_cenario_estado(caminho: str, caminho_estado, estado: str, regiao: str, ano_inicio: int, ano_fim: int):
@@ -841,14 +944,20 @@ def secao_cenario_estado(caminho: str, caminho_estado, estado: str, regiao: str,
     for linha in (indicadores[:3], indicadores[3:]):
         for coluna, (rotulo, valor) in zip(st.columns(3), linha):
             coluna.metric(rotulo, valor)
+    # recordes do mês: sempre com o ano da passagem (o filtro de período só muda a sazonalidade e as estatísticas)
+    atual = panorama_em_cache(caminho, estado, ano_inicio, cen.dia.year, regiao)
+    with st.container(border=True):
+        st.markdown("**📝 Cenário atual**")
+        for paragrafo in texto_do_cenario(cen, atual.acima_no_mes, atual.anos_recorde):
+            st.markdown(paragrafo)
 
-    c1, c2 = st.columns([1, 1.1])
+    limite = limite_da_regiao(caminho_estado, cen.sigla_uf, cen.regiao)
+    rec = recorrencia_do_cenario(caminho, caminho_estado, estado, regiao, situacao["ultimo_dia"], provisorios)
+    mostrar_mapa_interativo("mapa_panorama", cen.nowcast.recentes(DIAS_SEMANA), limite, estado, rec)
+    c1, c2 = st.columns([1.1, 1])
     with c1:
-        with st.spinner("Desenhando o mapa..."):
-            st.image(mapa_cenario(caminho, caminho_estado, estado, regiao, situacao["ultimo_dia"], provisorios),
-                     width="stretch")
+        st.altair_chart(interativo_nowcast_semanal(cen.nowcast), width="stretch")
     with c2:
-        st.altair_chart(interativo_nowcast(cen.nowcast), width="stretch")
         abas = st.tabs(["Municípios", "UCs e TIs", f"Focos de {cen.dia:%d/%m}"])
         with abas[0]:
             tabela(cen.municipios, height=260)
@@ -862,23 +971,95 @@ def secao_cenario_estado(caminho: str, caminho_estado, estado: str, regiao: str,
                 "data": "Data", "NM_MUN": "Município", "regiao": "Região", "lat": "Latitude", "lon": "Longitude"}),
                 height=260)
 
+    municipios_acima_da_maxima(caminho, cen, atual, ano_inicio)
+
+    with st.spinner("Calculando as anomalias do mês..."):
+        mostrar_anomalias(anomalias_cenario_png(caminho, caminho_estado, estado, regiao, situacao["ultimo_dia"],
+                                                provisorios), cen.nome)
+
     b1, b2 = st.columns(2)
     with b1:
         st.markdown("**📄 Relatório do cenário (PDF)**")
         st.caption(f"Inclui no fim as estatísticas de focos ativos de {ano_inicio}–{ano_fim} (período do filtro).")
         chave = (estado, regiao, cen.dia, situacao["ultimo_dia"], len(cen.focos_semana), ano_inicio, ano_fim)
-        if st.button("📄 Gerar relatório do cenário (PDF)", key="cenario_gerar"):
-            with st.spinner("Gerando o relatório do cenário..."):
+        if st.button("📄 Gerar relatório e pacote do cenário", key="cenario_gerar"):
+            with st.spinner("Gerando o relatório e o pacote do cenário..."):
                 limite = limite_da_regiao(caminho_estado, cen.sigla_uf, cen.regiao)
                 pan = panorama_em_cache(caminho, estado, ano_inicio, ano_fim, regiao)
                 est = estatisticas_territorio(pan.focos, pan.nome, ano_inicio, ano_fim, cobertura(caminho))
-                st.session_state["cenario_pdf"] = (chave, *gerar_relatorio_cenario(cen, limite, est))
+                sazonalidades = estatisticas_dos_municipios(atual.focos, list(atual.acima_no_mes["Município"]),
+                                                            ano_inicio, cen.dia.year, cobertura(caminho)) \
+                    if atual.acima_no_mes is not None else {}
+                pngs = {}
+                pdf, nome_pdf = gerar_relatorio_cenario(cen, limite, est, pan.focos, acima_no_mes=atual.acima_no_mes,
+                                                        anos_recorde=atual.anos_recorde, sazonalidades=sazonalidades,
+                                                        pngs=pngs)
+                semana = focos_no_intervalo(base_focos(caminho), estado, regiao, cen.inicio_semana, cen.dia)
+                geo = geojson_focos(semana, cen.tipo_regiao, f"Focos da última semana — {cen.nome}")
+                st.session_state["cenario_pdf"] = (chave, pdf, nome_pdf,
+                                                   *pacote_cenario(cen, pdf, nome_pdf, pngs, atual.acima_no_mes, geo))
         guardado = st.session_state.get("cenario_pdf")
         if guardado and guardado[0] == chave:
             st.download_button("⬇️ Baixar relatório do cenário (PDF)", guardado[1], file_name=guardado[2],
                                mime="application/pdf", type="primary", on_click="ignore", key="cenario_baixar")
+            st.download_button("📦 Baixar pacote completo do cenário (.zip)", guardado[3], file_name=guardado[4],
+                               mime="application/zip", on_click="ignore", key="cenario_baixar_zip")
     with b2:
         exportar_focos_geojson(caminho, estado, regiao, cen)
+
+
+def municipios_acima_da_maxima(caminho: str, cen, atual, ano_inicio: int):
+    """Municípios com mais focos no mês (até o dia) do que em qualquer ano anterior nas mesmas datas."""
+    acima = atual.acima_no_mes
+    if acima is None or atual.anos_recorde is None:
+        return
+    mes = MESES_EXTENSO[cen.dia.month - 1]
+    st.markdown(f"#### 🔺 Municípios acima da máxima histórica em {mes} (1º a {cen.dia:%d/%m} × "
+                f"{atual.anos_recorde[0]}–{atual.anos_recorde[1]})")
+    if acima.empty:
+        st.caption("Nenhum município ultrapassou a máxima histórica das mesmas datas.")
+        return
+    tabela(acima, column_config={"Ano da máxima": st.column_config.NumberColumn(format="%d"),
+                                 "Vezes a máxima": st.column_config.NumberColumn(format="%.1f ×")})
+    escolhido = st.selectbox("Sazonalidade do município", list(acima["Município"]), key="pan_acima_mun",
+                             help="No PDF e no pacote do cenário vai a sazonalidade de todos.")
+    est = estatisticas_dos_municipios(atual.focos, [escolhido], ano_inicio, cen.dia.year, cobertura(caminho))
+    figura = grafico_sazonalidade(est[escolhido])
+    mostrar_figura(figura, st.columns([3, 1])[0])
+    plt.close(figura)
+
+
+def mostrar_anomalias(figuras: dict, nome: str):
+    """Os três mapas de anomalia em abas (os mesmos do PDF), com a nota de como ler."""
+    st.markdown(f"### 🌡️ Anomalias de focos de calor — {nome}")
+    if not any(f is not None for f in figuras.values()):
+        st.info("Anomalias indisponíveis: são precisos pelo menos 3 anos completos de referência no período "
+                "(e o limite do território).")
+        return
+    abas = st.tabs(["Quantidade", "Localização", "Combinada"])
+    for aba, figura in zip(abas, figuras.values()):
+        with aba:
+            if figura is None:
+                st.caption("Sem dados.")
+            elif isinstance(figura, bytes):
+                st.image(figura, width="stretch")
+            else:
+                mostrar_figura(figura, st.columns([3, 1])[0])
+    with st.expander("Como ler e metodologia"):
+        st.markdown(texto_metodologia_markdown())
+
+
+@st.cache_data(show_spinner=False, max_entries=8)
+def anomalias_cenario_png(caminho: str, caminho_estado, estado: str, regiao: str, ultimo_dia, provisorios: tuple):
+    """PNG dos três mapas de anomalia do estado/região (grade de 10 km), guardados entre as execuções."""
+    cen = cenario_em_cache(caminho, estado, regiao, ultimo_dia, provisorios)
+    limite = limite_da_regiao(caminho_estado, cen.sigla_uf, cen.regiao)
+    figuras = figuras_anomalias(anomalias_do_cenario(cen, limite, focos_do_recorte(base_focos(caminho), estado,
+                                                                                    regiao)[0]), limite, cen.nome)
+    imagens = {tipo: png(figuras[f"anomalia_{tipo}"], dpi=110) if f"anomalia_{tipo}" in figuras else None
+               for tipo in TIPOS_ANOMALIA}
+    fechar_figuras(figuras)
+    return imagens
 
 
 def exportar_focos_geojson(caminho: str, estado: str, regiao: str, cen):
@@ -978,10 +1159,15 @@ def pagina_panorama():
     st.divider()
     if pan.regiao is None and not pan.por_regiao.empty:
         st.markdown(f"### 🧭 Focos por {pan.tipo_regiao} — {ano_fim}")
-        tabela(pan.por_regiao)
+        tabela_com_recordes(pan.por_regiao, pan.recordes_regiao, pan.anos_recorde)
     st.markdown(f"### 📋 Municípios com mais focos em {ano_fim}{ate} — {pan.nome}")
     st.caption("Empate decidido pelos focos no último mês e, depois, na última semana dos dados.")
-    tabela(pan.ranking_municipios)
+    recordes = pan.recordes_municipios
+    tabela_com_recordes(pan.ranking_municipios.head(TOP_MUNICIPIOS),
+                        recordes.head(TOP_MUNICIPIOS) if recordes is not None else None, pan.anos_recorde)
+    if len(pan.ranking_municipios) > TOP_MUNICIPIOS:
+        with st.expander(f"Ver todos os {len(pan.ranking_municipios)} municípios com focos em {ano_fim}"):
+            tabela_com_recordes(pan.ranking_municipios, recordes, pan.anos_recorde, altura=600)
 
     st.divider()
     secao_estatisticas(pan.focos, pan.nome, ano_inicio, ano_fim, prefixo="pan_est_")
@@ -995,7 +1181,7 @@ PAGINAS = {
 
 
 def main():
-    pagina = st.sidebar.radio("Navegação", list(PAGINAS), label_visibility="collapsed")
+    pagina = st.sidebar.radio("Navegação", list(PAGINAS), label_visibility="collapsed", key="navegacao")
     st.sidebar.divider()
     if config.caminho_focos().exists():
         with st.sidebar:

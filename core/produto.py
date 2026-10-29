@@ -30,15 +30,19 @@ from core.estatisticas import (
 from core.grade import grade_qgis, kml_risco, nota_grade, risco_de_recorrencia
 from core.graficos import grafico_evolucao_tendencia, grafico_top_estado
 from core.graficos_estatisticas import figuras_estatisticas, grafico_nowcast, grafico_nowcast_semanal
-from core.mapas import mapa_densidade, mapa_dispersao, mapa_recentes, mapa_recorrencia, mapa_trimestral
+from core.anomalias import PERIODO_RELATORIO, TIPOS, calcular_anomalias
+from core.mapas import (
+    mapa_anomalia, mapa_densidade, mapa_dispersao, mapa_localizacao, mapa_recentes, mapa_recorrencia, mapa_trimestral,
+)
 from core.relatorio_pdf import gerar_pdf
-from core.territorios import area_km2
+from core.territorios import area_km2, caminho_do_estado, municipios_simplificados
 from core.texto import neutralizar_formulas, nome_arquivo
 
 DPI_PNG = 180
 DIAS_MAPA_RELATORIO = 7          # mapa do cenário atual no PDF/pacote
 # figura → nome do PNG no pacote (sem o sufixo _<alvo>.png)
 NOMES_PNG = {
+    "localizacao": "mapa_0_localizacao",
     "top_estado": "grafico_top5_estado",
     "evolucao": "grafico_evolucao_historica",
     "sazonalidade": "grafico_sazonalidade",
@@ -52,7 +56,10 @@ NOMES_PNG = {
     "comparativo_semestre2": "estatisticas_comparativo_2o_semestre",
     "acumulado_mensal": "estatisticas_acumulado_mensal",
     "nowcast_diario": "cenario_atual_ultimos_30_dias",
-    "nowcast_semanal": "cenario_atual_ultimas_52_semanas",
+    "nowcast_semanal": "cenario_atual_ultimas_13_semanas",
+    "anomalia_quantidade": "mapa_5_anomalia_quantidade",
+    "anomalia_localizacao": "mapa_6_anomalia_localizacao",
+    "anomalia_combinada": "mapa_7_anomalia_combinada",
     "nowcast_mapa": "cenario_atual_mapa_focos_recentes",
 }
 COR_MINIMO = "FFD54F"     # destaque do INPE: menor valor da coluna em amarelo, maior em vermelho
@@ -73,7 +80,10 @@ def figuras_territorio(diag, est: EstatisticasMunicipio, nowcast=None, dias_mapa
     municipio = isinstance(diag, DiagnosticoMunicipio)
     focos_ano = diag.focos[diag.focos["ano"] == diag.ano_fim]
     areas = diag.areas if municipio else None
+    caminho_estado = caminho_do_estado(diag.sigla_uf)
     figuras = {
+        "localizacao": mapa_localizacao(diag.sigla_uf, diag.poligono, diag.municipio.title(),
+                                        municipios_simplificados(caminho_estado) if caminho_estado else ()),
         "evolucao": grafico_evolucao_tendencia(diag.serie_anual),
         "mapa_dispersao": mapa_dispersao(focos_ano, diag.poligono, diag.municipio, diag.ano_fim, areas),
         "mapa_densidade": mapa_densidade(diag.focos, diag.poligono, diag.municipio, diag.ano_inicio, diag.ano_fim),
@@ -83,12 +93,28 @@ def figuras_territorio(diag, est: EstatisticasMunicipio, nowcast=None, dias_mapa
     }
     if municipio:
         figuras["top_estado"] = grafico_top_estado(diag.top_acumulado, diag.municipio)
+    figuras.update(figuras_anomalias(anomalias_do_diagnostico(diag, est), diag.poligono, diag.municipio.title()))
     if nowcast is not None:
         figuras["nowcast_diario"] = grafico_nowcast(nowcast)
         figuras["nowcast_semanal"] = grafico_nowcast_semanal(nowcast)
         figuras["nowcast_mapa"] = mapa_recentes(nowcast.recentes(dias_mapa), diag.poligono, diag.municipio,
                                                 nowcast.ultimo_dia, dias_mapa, areas)
     return figuras
+
+
+def anomalias_do_diagnostico(diag, est: EstatisticasMunicipio):
+    """Anomalias do período do relatório (``anomalias.PERIODO_RELATORIO``) no ano final × os anos completos
+    anteriores do período da análise; None sem limite ou sem anos para comparar."""
+    anos = [a for a in est.anos_estatistica if a < diag.ano_fim and a not in est.anos_parciais]
+    if diag.poligono is None or len(anos) < 3:
+        return None
+    return calcular_anomalias(diag.focos, diag.poligono.bounds, diag.fim_dados, PERIODO_RELATORIO, anos)
+
+
+def figuras_anomalias(an, poligono, nome: str) -> dict:
+    if an is None:
+        return {}
+    return {f"anomalia_{tipo}": mapa_anomalia(an, tipo, poligono, nome) for tipo in TIPOS}
 
 
 def fechar_figuras(figuras: dict):
@@ -145,16 +171,16 @@ def tabelas_nowcast(nowcast) -> dict[str, pd.DataFrame]:
         "inicio": "Início", "fim": "Fim", "focos": "Focos", "media": "Média da semana (anos anteriores)",
         "maximo": "Máximo da semana (anos anteriores)"})
     indicadores = pd.DataFrame(list(nowcast.indicadores.items()), columns=["Indicador", "Valor"])
-    return {"Nowcast_Ultimos_30_Dias": serie, "Nowcast_Ultimas_52_Semanas": semanal,
+    return {"Nowcast_Ultimos_30_Dias": serie, "Nowcast_Ultimas_13_Semanas": semanal,
             "Nowcast_Focos_Recentes": recentes, "Nowcast_Indicadores": indicadores}
 
 
-def _destacar_extremos(planilha, tabela: pd.DataFrame, linhas: list[str]):
+def _destacar_extremos(planilha, tabela: pd.DataFrame, linhas: list[str], recorde: str | None = None):
     """Pinta o menor (amarelo) e o maior (vermelho) valor de cada coluna, como no site do INPE."""
     from openpyxl.styles import Font, PatternFill
 
     posicao_linha = {nome: i + 2 for i, nome in enumerate(tabela.index)}
-    for j, (minimos, maximos) in enumerate(extremos_por_coluna(tabela, linhas).values(), start=2):
+    for j, (minimos, maximos) in enumerate(extremos_por_coluna(tabela, linhas, recorde).values(), start=2):
         for nome in minimos:
             celula = planilha.cell(row=posicao_linha[nome], column=j)
             celula.fill, celula.font = PatternFill("solid", fgColor=COR_MINIMO), Font(bold=True)
@@ -173,7 +199,8 @@ def planilha_estatisticas(diag, est: EstatisticasMunicipio, nowcast=None) -> byt
         for aba, tabela in tabelas_estatisticas(est).items():
             tabela.to_excel(escritor, sheet_name=aba)
         anos = [str(a) for a in est.anos_estatistica]   # o ano de referência não é destacado
-        _destacar_extremos(escritor.sheets["Focos_Mes_a_Mes"], tabela_mensal_exibicao(est), anos)
+        _destacar_extremos(escritor.sheets["Focos_Mes_a_Mes"], tabela_mensal_exibicao(est), anos,
+                           str(est.ano_referencia))
         pd.DataFrame({"Notas": notas(est)}).to_excel(escritor, sheet_name="Notas_Estatisticas", index=False)
         if nowcast is not None:
             for aba, tabela in tabelas_nowcast(nowcast).items():

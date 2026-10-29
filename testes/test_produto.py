@@ -144,7 +144,8 @@ def test_mapa_recentes_sem_fundo(municipio):
 
 def test_figuras_municipio(municipio):
     figuras = municipio[1]
-    assert set(figuras) == set(NOMES_PNG)
+    # a amostra (2023–2024) tem um só ano de referência: as anomalias precisam de pelo menos 3 (docs/07 §12)
+    assert set(figuras) == {k for k in NOMES_PNG if not k.startswith("anomalia_")}
     assert all(f is not None for f in figuras.values())
 
 
@@ -156,9 +157,9 @@ def test_pacote_municipio(municipio):
         "relatorio_diagnostico_NOVO_PROGRESSO_2023_2024.pdf", "estatisticas_NOVO_PROGRESSO_2023_2024.xlsx",
         "dados_MUN_NOVO_PROGRESSO.csv", "metadados.json", "grade_10x10km_NOVO_PROGRESSO.geojson", "grade_5x5km_NOVO_PROGRESSO.geojson",
         "ranking_municipios.csv", "ranking_ucs.csv", "ranking_tis.csv",
-        "nowcast/Nowcast_Ultimos_30_Dias.csv", "nowcast/Nowcast_Ultimas_52_Semanas.csv", "nowcast/Nowcast_Focos_Recentes.csv",
+        "nowcast/Nowcast_Ultimos_30_Dias.csv", "nowcast/Nowcast_Ultimas_13_Semanas.csv", "nowcast/Nowcast_Focos_Recentes.csv",
     } <= nomes
-    assert {f"imagens/{n}_NOVO_PROGRESSO.png" for n in NOMES_PNG.values()} <= nomes
+    assert {f"imagens/{n}_NOVO_PROGRESSO.png" for k, n in NOMES_PNG.items() if not k.startswith("anomalia_")} <= nomes
     assert {f"estatisticas/0{i}_{n}.csv" for i, n in enumerate(
         ["Focos_Mes_a_Mes", "Focos_Dia_a_Dia", "Comparativo_Mensal", "Comparativo_Semanal",
          "Comparativo_1o_Semestre", "Comparativo_2o_Semestre", "Acumulado_Mensal"], start=1)} <= nomes
@@ -185,7 +186,7 @@ def test_planilha(municipio):
     assert list(planilhas) == ["Evolucao_Historica", "Sazonalidade_Mensal", "Focos_Mes_a_Mes", "Focos_Dia_a_Dia",
                                "Comparativo_Mensal", "Comparativo_Semanal", "Comparativo_1o_Semestre",
                                "Comparativo_2o_Semestre", "Acumulado_Mensal", "Notas_Estatisticas",
-                               "Nowcast_Ultimos_30_Dias", "Nowcast_Ultimas_52_Semanas", "Nowcast_Focos_Recentes", "Nowcast_Indicadores"]
+                               "Nowcast_Ultimos_30_Dias", "Nowcast_Ultimas_13_Semanas", "Nowcast_Focos_Recentes", "Nowcast_Indicadores"]
     assert planilhas["Evolucao_Historica"]["Focos"].tolist() == [1136, 4787]
     sazonal = planilhas["Sazonalidade_Mensal"]
     assert list(sazonal.columns) == ["Mês", "Média", "p10", "p90", "2024"]

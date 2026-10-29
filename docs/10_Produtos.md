@@ -17,6 +17,8 @@ Mesmo conteúdo para município, UC e TI (P7), montado em memória e baixado pel
 | `metadados.json` | ✔ com UF, tipo de região, região, data do nowcast | ✔ com a UF predominante |
 | `imagens/grafico_top5_estado_<alvo>.png` | ✔ | — |
 | `imagens/grafico_evolucao_historica_…`, `grafico_sazonalidade_…` | ✔ | ✔ |
+| `imagens/mapa_0_localizacao_<alvo>.png` | ✔ | ✔ |
+| `imagens/mapa_5_anomalia_quantidade_…`, `mapa_6_anomalia_localizacao_…`, `mapa_7_anomalia_combinada_<alvo>.png` (≥ 3 anos de referência) | ✔ | ✔ |
 | `imagens/mapa_1_densidade_ano_final_…`, `mapa_2_densidade_acumulada_…`, `mapa_3_recorrencia_…`, `mapa_4_sazonalidade_trimestral_<alvo>.png` | ✔ | ✔ |
 | `imagens/estatisticas_comparativo_mensal_…`, `_semanal_…`, `_1o_semestre_…`, `_2o_semestre_…`, `estatisticas_acumulado_mensal_<alvo>.png` | ✔ (§5) | ✔ |
 | `estatisticas/01_Focos_Mes_a_Mes.csv` … `07_Acumulado_Mensal.csv` | ✔ (§5) | ✔ |
@@ -36,11 +38,18 @@ Campos de cada arquivo em `docs/06` §4. PNGs a 180 dpi. Com a base completa (20
 
 ## 3. Mapas (`core/mapas.py`)
 
+Os gráficos de sazonalidade mensal trazem no título o nome do território analisado (estado, região, município, UC ou TI).
+
 Regras em `docs/07` §4–§6. Limite do território em azul `#1E88E5`; UC em verde `#2E7D32` (contínuo), TI em marrom `#8D4E00` (tracejado). Eixos em graus, com a proporção real da latitude.
 
 - **Kernel (mapas 1, 2, 4):** escala de amarelo-claro a vinho, em focos por 100 km²; cada foco como pequena cruz cinza quase transparente (até 2.000 focos no mapa; acima disso não são desenhadas); nota com o desvio do kernel, o tamanho da célula e se os focos estão marcados.
 - **Recorrência (mapa 3):** grade proporcional ao território (10, 5, 2,5 ou 1,25 km, `docs/07` §4) ajustada à latitude, tamanho no título, escala plasma, nota sobre o ajuste.
 - **Cenário atual:** imagem de satélite **Sentinel-2 cloudless 2024** da EOX (licença CC BY-NC-SA 4.0, tiles XYZ, `core/fundo_satelite.py`; fonte em `core/config.py`, P22), limite em ciano, UC verde-limão e TI laranja; focos com contorno preto, cor pela idade (último dia `#FF1744`, 1–2 dias `#FF9100`, 3–6 dias `#FFEA00`, 7–29 dias `#E0E0E0`); crédito "Imagem: Sentinel-2 cloudless 2024 (s2maps.eu) por EOX IT Services GmbH, CC BY-NC-SA 4.0 — contém dados Copernicus Sentinel modificados (2024)". Sem internet: sem imagem, com aviso.
+
+- **Localização (mapa 0):** dois painéis — Brasil com os estados (`referencia/limites_uf.geojson`), o estado do território em laranja `#FFB74D` e um retângulo vermelho no território; e o estado com os limites municipais em cinza, o território em vermelho `#D32F2F` e uma seta com o nome. Na tela do diagnóstico, no PDF do diagnóstico (logo após o resumo), no PDF do cenário (após os indicadores) e no pacote (`imagens/mapa_0_localizacao_<alvo>.png`).
+- **Mapa interativo (só na tela — Panorama e abertura da página Diagnóstico, não dentro do diagnóstico; `core/mapa_interativo.py`):** pydeck/deck.gl (vem com o Streamlit, funciona offline; só a imagem precisa de internet). Mapa base Sentinel-2 cloudless como estilo MapLibre numa URL `data:`; quadrícula de recorrência do mês com escala YlOrRd e opacidade 110/255, sem contorno; limites municipais brancos finos, clicáveis; território em ciano; focos com a cor da idade. O deck.gl desenha numa tela separada, por cima do mapa base, e não multiplica as cores com o satélite: a transparência faz o papel do "multiplicar" pedido. O mapa do PDF não mudou.
+
+- **Anomalias (mapas 5, 6 e 7, `mapa_anomalia`):** quantidade, localização e combinada (`docs/07` §12) na grade proporcional; 7 classes de vermelho-escuro (≤ −3, mais focos) a azul-escuro (≥ 3, menos focos), comum em branco; pontos preenchidos com a cor da própria célula e borda verde nas células significativas (pequeno, borda verde-clara `#81C784` = q < 5%; grande, borda verde-escura `#1B5E20` mais grossa = q < 1%; Benjamini–Hochberg); contorno vermelho `#C62828` / azul `#1565C0` com halo branco nos grupos de células a 1% a até 20 km; nota com o total do período, a média e a anomalia do território. Na tela (abas, no diagnóstico de município/UC/TI e no Panorama), nos PDFs do diagnóstico (seção "Anomalias de Focos de Calor", depois dos mapas) e do cenário (depois da recorrência do mês; grade de 10 km), com o texto de como ler e a metodologia; no pacote, `imagens/mapa_5_anomalia_quantidade_…`, `mapa_6_anomalia_localizacao_…`, `mapa_7_anomalia_combinada_<alvo>.png`. Sem 3 anos de referência no período, não são gerados.
 
 ## 4. PDF do diagnóstico (`core/relatorio_pdf.py`)
 
@@ -88,15 +97,19 @@ Regras em `docs/07` §9. Na tela: 5 indicadores (vermelho quando acima da média
 
 Botão **📄 Gerar relatório do cenário (PDF)** no Panorama do Estado; depois aparece **⬇️ Baixar** (some quando muda o estado, a região ou a base). Arquivo `Cenario_Focos_<Estado ou Região>_<AAAAMMDD da passagem>.pdf`, no padrão visual do PDF do diagnóstico (cabeçalho com logos, rodapé "Página X de Y"):
 
-1. Indicadores (os mesmos 6 da tela) e nota com as definições (`docs/07` §11, texto justificado), data de geração e último dia buscado;
+1. Indicadores (os mesmos 6 da tela) e nota com as definições (`docs/07` §11, texto justificado), data de geração e último dia buscado; mapa de localização (§3);
 2. Mapa dos focos da última semana sobre o Sentinel-2 cloudless, cor pela idade, centralizado, com a legenda centralizada abaixo do mapa;
-3. Focos por dia nos últimos 30 dias e **por semana nas últimas 52 semanas** × máximo e média da mesma semana nos anos anteriores;
+3. Focos por dia nos últimos 30 dias e **por semana no último trimestre** (13 semanas, faixas dos meses) × máximo e média da mesma semana nos anos anteriores;
 4. **Gráficos dos focos analisados:** focos por dia na semana (fora de áreas protegidas / em UC / em TI, empilhados), focos da semana por região (só no estado inteiro, com a parte das 24 h) e os 15 municípios com mais focos na semana;
 5. **Recorrência do mês × focos atuais:** grade proporcional (`docs/07` §4) com o nº de anos em que cada célula teve foco no mês da passagem (anos comparados do nowcast) e os focos da semana por cima; leitura com a % dos focos em células com histórico no mês e em células com foco em pelo menos metade dos anos;
 6. Municípios com focos na semana (até 40), UCs e TIs com focos na semana (até 20) — a lista dos focos das 24 h saiu (P29: o GeoJSON a substitui);
 7. Nota de fontes e canais de atendimento;
+7a. **Cenário atual** (texto automático, logo depois dos indicadores) e **Municípios acima da máxima histórica no mês** (tabela: focos no mês, máxima anterior, ano, vezes a máxima), depois das anomalias;
+7b. **Sazonalidade e anomalia dos municípios acima da máxima** — uma linha por município: o gráfico de sazonalidade (com o nome do município no título) e, ao lado, o mapa compacto da **anomalia combinada** do mês no município (grade proporcional dele, `mapa_anomalia(..., compacto=True)`); antes das estatísticas;
 8. **Estatísticas de focos ativos** (modelo INPE, a mesma seção do PDF do diagnóstico, §5) do estado/região no período do filtro do Panorama, com os parâmetros padrão.
+
+O botão **📄 Gerar relatório e pacote do cenário** gera o PDF e o **pacote completo** (`Cenario_Completo_<alvo>_<AAAAMMDD>.zip`, conteúdo em `docs/06`).
 
 Ao lado do PDF, **🗺️ Focos de calor em GeoJSON** (P29): data inicial e final (padrão = a última semana), **Preparar GeoJSON** e **Baixar**: todos os focos do estado/região no intervalo, com os campos de `docs/06`. Acima de 200.000 focos a tela pede um intervalo menor.
 
-No PDF do diagnóstico (§4), a seção do cenário atual também ganhou o gráfico das últimas 52 semanas, abaixo do de 30 dias (PNG `imagens/cenario_atual_ultimas_52_semanas_<alvo>.png` e aba `Nowcast_Ultimas_52_Semanas` no Excel). Em todos os PDFs, as notas são justificadas.
+No PDF do diagnóstico (§4), a seção do cenário atual também tem o gráfico de focos por semana no último trimestre (13 semanas, faixas dos meses), abaixo do de 30 dias (PNG `imagens/cenario_atual_ultimas_13_semanas_<alvo>.png` e aba `Nowcast_Ultimas_13_Semanas` no Excel). No Panorama (tela), esse gráfico, interativo, substituiu o de 30 dias. Em todos os PDFs, as notas são justificadas.

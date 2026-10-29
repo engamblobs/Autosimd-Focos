@@ -161,6 +161,12 @@ def test_extremos_por_coluna():
     # meses com 0 não são destacados: o amarelo vai para o menor valor diferente de 0
     com_zero = pd.DataFrame({"a": [0, 3, 7], "b": [0, 0, 0]}, index=["x", "y", "z"])
     assert extremos_por_coluna(com_zero, ["x", "y", "z"]) == {"a": ({"y"}, {"z"}), "b": (set(), set())}
+    # ano de referência (mesmo com o mês em andamento) acima da máxima: o vermelho vai para ele
+    ref = pd.DataFrame({"jan": [3, 7, 9], "out": [3, 7, 5], "dez": [3, 7, 0]}, index=["2024", "2025", "2026"])
+    e = extremos_por_coluna(ref, ["2024", "2025"], "2026")
+    assert e["jan"] == ({"2024"}, {"2026"}) and e["out"] == ({"2024"}, {"2025"}) and e["dez"] == ({"2024"}, {"2025"})
+    empate = extremos_por_coluna(pd.DataFrame({"m": [4, 7, 7]}, index=["a", "b", "c"]), ["a", "b"], "c")
+    assert empate["m"] == ({"a"}, {"b", "c"})
 
 
 def test_graficos(est):

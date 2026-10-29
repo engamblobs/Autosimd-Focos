@@ -20,6 +20,7 @@ from core.grade import Grade, grade_do_territorio, recorrencia, valor_na_celula
 from core.nowcast import Nowcast, nowcast_territorio
 from core.panorama import TODAS, regioes_dos_focos
 from core.regioes import regiao_do_municipio, tipo_regiao
+from core.texto import fmt_inteiro
 
 DIAS_SEMANA = 7
 
@@ -160,12 +161,103 @@ class RecorrenciaDoMes:
         return float((self.atuais["recorrencia"] >= len(self.anos) / 2).mean() * 100)
 
 
-def recorrencia_do_mes(cen: CenarioAtual, limites) -> RecorrenciaDoMes:
-    """Grade proporcional do território (docs/07 §4): em quantos anos cada célula teve foco no mês do dia da
-    passagem, e em que células caíram os focos da última semana."""
+def recorrencia_mensal(historico: pd.DataFrame, atuais: pd.DataFrame, limites, mes: int,
+                       anos: list[int]) -> RecorrenciaDoMes:
+    """Grade proporcional do território (docs/07 §4): em quantos ``anos`` cada célula teve foco no ``mes``
+    (``historico`` = focos com lon, lat, ano e mes) e em que células caíram os focos ``atuais``."""
     grade = grade_do_territorio(limites)
-    historico = cen.historico_mes if cen.historico_mes is not None else pd.DataFrame(columns=["lon", "lat", "ano"])
+    if "mes" in historico.columns:
+        historico = historico[(historico["mes"] == mes) & historico["ano"].isin(anos)]
     matriz = recorrencia(grade, historico["lon"], historico["lat"], historico["ano"])
-    atuais = cen.focos_semana.assign(recorrencia=valor_na_celula(grade, matriz, cen.focos_semana["lon"],
-                                                                 cen.focos_semana["lat"]).astype(int))
-    return RecorrenciaDoMes(cen.dia.month, list(cen.nowcast.anos_comparados), grade, matriz, atuais)
+    atuais = atuais.assign(recorrencia=valor_na_celula(grade, matriz, atuais["lon"], atuais["lat"]).astype(int))
+    return RecorrenciaDoMes(mes, list(anos), grade, matriz, atuais)
+
+
+def recorrencia_do_mes(cen: CenarioAtual, limites) -> RecorrenciaDoMes:
+    """Recorrência do mês da passagem × focos da última semana no estado/região."""
+    historico = cen.historico_mes if cen.historico_mes is not None else pd.DataFrame(columns=["lon", "lat", "ano"])
+    return recorrencia_mensal(historico, cen.focos_semana, limites, cen.dia.month, cen.nowcast.anos_comparados)
+
+
+# ------------------------------------------------------- Texto do cenário atual
+
+MESES_EXTENSO = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro",
+                 "outubro", "novembro", "dezembro"]
+
+
+# preposição com o nome do estado ("no Pará", "na Bahia", "em Goiás")
+_NO = {"Acre", "Amapá", "Amazonas", "Ceará", "Distrito Federal", "Espírito Santo", "Maranhão", "Mato Grosso",
+       "Mato Grosso do Sul", "Pará", "Paraná", "Piauí", "Rio de Janeiro", "Rio Grande do Norte", "Rio Grande do Sul",
+       "Tocantins"}
+_NA = {"Bahia", "Paraíba"}
+
+
+def em_territorio(nome: str) -> str:
+    """"no Pará", "na Bahia", "em Goiás", "na Região Xingu"."""
+    if nome in _NO:
+        return f"no {nome}"
+    if nome in _NA or nome.startswith("Região"):
+        return f"na {nome}"
+    return f"em {nome}"
+
+
+def _comparacao(valor: float, media: float) -> str:
+    if media != media or not media:
+        return ""
+    diferenca = (valor - media) / media * 100
+    if abs(diferenca) < 5:
+        return f", próximo da média dos mesmos dias nos anos anteriores ({fmt_inteiro(round(media))})"
+    lado = "acima" if diferenca > 0 else "abaixo"
+    return (f", {fmt_inteiro(round(abs(diferenca)))}% {lado} da média dos mesmos dias nos anos anteriores "
+            f"({fmt_inteiro(round(media))})")
+
+
+def texto_do_cenario(cen: CenarioAtual, acima_no_mes: pd.DataFrame | None = None,
+                     anos_recorde: tuple[int, int] | None = None, max_citados: int = 8,
+                     no_relatorio: bool = False) -> list[str]:
+    """Parágrafos que apresentam o cenário atual (tela e PDF do cenário), só com números calculados."""
+    i = cen.nowcast.indicadores
+    nome, dia = cen.nome, cen.dia
+    parcial = " (dia ainda parcial)" if cen.provisorio else ""
+    textos = [
+        f"Na passagem mais recente do satélite de referência ({dia:%d/%m/%Y}{parcial}) foram detectados "
+        f"{fmt_inteiro(i['ultimo_dia'])} focos de calor {em_territorio(nome)}"
+        f"{_comparacao(i['ultimo_dia'], i['media_ultimo_dia'])}. "
+        f"Na última semana ({cen.inicio_semana:%d/%m} a {dia:%d/%m}) foram {fmt_inteiro(i['ultimos_7'])} focos"
+        f"{_comparacao(i['ultimos_7'], i['media_7'])}, em {fmt_inteiro(cen.focos_semana['NM_MUN'].nunique())} "
+        "municípios."]
+    variacao = i["variacao_acumulado_pct"]
+    if variacao is not None:
+        lado = "acima" if variacao >= 0 else "abaixo"
+        textos.append(f"No ano, até {dia:%d/%m}, são {fmt_inteiro(i['acumulado_ano'])} focos, "
+                      f"{fmt_inteiro(round(abs(variacao)))}% {lado} da média do mesmo período — o "
+                      f"{i['posicao_acumulado']}º maior acumulado até esta data entre {i['anos_ranking']} anos.")
+    if acima_no_mes is not None and anos_recorde:
+        mes = MESES_EXTENSO[dia.month - 1]
+        periodo = f"{anos_recorde[0]}–{anos_recorde[1]}"
+        if acima_no_mes.empty:
+            textos.append(f"Nenhum município {em_territorio(nome)} ultrapassou, em {mes} (de 1º a {dia:%d/%m}), a "
+                          f"máxima histórica de focos das mesmas datas ({periodo}).")
+        else:
+            citados = []
+            for _, r in acima_no_mes.head(max_citados).iterrows():
+                ano = r["Ano da máxima"]
+                antes = ("nenhum foco antes nessas datas" if pd.isna(ano)
+                         else f"máxima anterior {fmt_inteiro(r['Máxima anterior'])} em {int(ano)}")
+                citados.append(f"{r['Município']} ({fmt_inteiro(r['Focos no mês'])} focos; {antes})")
+            resto = len(acima_no_mes) - len(citados)
+            textos.append(
+                f"Em {mes} (de 1º a {dia:%d/%m}), {len(acima_no_mes)} município(s) já ultrapassaram a máxima "
+                f"histórica de focos das mesmas datas ({periodo}): " + "; ".join(citados)
+                + (f"; e mais {resto}." if resto > 0 else ".")
+                + (" A sazonalidade de cada um está no fim do relatório." if no_relatorio else ""))
+    em_uc, em_ti = int((cen.focos_semana["UC"] != "NONE").sum()), int((cen.focos_semana["TI"] != "NONE").sum())
+    if em_uc or em_ti:
+        texto = (f"Na última semana, {fmt_inteiro(em_uc)} focos ocorreram em Unidades de Conservação e "
+                 f"{fmt_inteiro(em_ti)} em Terras Indígenas")
+        if not cen.areas.empty:
+            a = cen.areas.iloc[0]
+            texto += (f"; a área protegida com mais focos foi {a['Área protegida']} "
+                      f"({fmt_inteiro(a['Última semana'])})")
+        textos.append(texto + ".")
+    return textos

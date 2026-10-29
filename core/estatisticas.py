@@ -304,20 +304,28 @@ def tabela_acumulado_exibicao(est: EstatisticasMunicipio) -> pd.DataFrame:
     return tabela
 
 
-def extremos_por_coluna(tabela: pd.DataFrame, linhas: list[str]) -> dict[str, tuple[set, set]]:
+def extremos_por_coluna(tabela: pd.DataFrame, linhas: list[str], recorde: str | None = None
+                        ) -> dict[str, tuple[set, set]]:
     """Coluna → (linhas com o mínimo, linhas com o máximo), considerando só ``linhas`` (destaque do INPE).
 
     Zero nunca é destacado: o mínimo é o menor valor diferente de 0, e a coluna só com zeros fica sem destaque.
+    ``recorde`` = linha do ano de referência: quando o valor dela (mesmo de um mês em andamento) passa da
+    máxima da série ou empata com ela, o vermelho vai para ela e sai do maior dos outros anos; ela nunca é o
+    mínimo (um mês incompleto seria quase sempre o menor).
     """
     resultado = {}
     for coluna in tabela.columns:
         valores = tabela.loc[[linha for linha in linhas if linha in tabela.index], coluna].dropna()
         valores = valores[valores != 0]
         if valores.empty:
-            resultado[coluna] = (set(), set())
+            atual = tabela.at[recorde, coluna] if recorde in tabela.index else None
+            resultado[coluna] = (set(), {recorde} if atual is not None and atual == atual and atual > 0 else set())
             continue
-        resultado[coluna] = (set(valores.index[valores == valores.min()]),
-                             set(valores.index[valores == valores.max()]))
+        minimos, maximos = set(valores.index[valores == valores.min()]), set(valores.index[valores == valores.max()])
+        atual = tabela.at[recorde, coluna] if recorde in tabela.index else None
+        if atual is not None and atual == atual and atual > 0 and atual >= valores.max():
+            maximos = {recorde} | (maximos if atual == valores.max() else set())
+        resultado[coluna] = (minimos, maximos)
     return resultado
 
 

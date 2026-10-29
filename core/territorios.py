@@ -15,7 +15,8 @@ from shapely.geometry import shape
 from shapely.validation import make_valid
 
 from core.config import (
-    LIMIAR_SOBREPOSICAO_AREA, LIMIAR_SOBREPOSICAO_TERRITORIO, caminho_ti, caminho_uc, pasta_municipios,
+    LIMIAR_SOBREPOSICAO_AREA, LIMIAR_SOBREPOSICAO_TERRITORIO, LIMITES_UF_GEOJSON, caminho_ti, caminho_uc,
+    pasta_municipios,
 )
 from core.texto import chave_nome
 
@@ -60,6 +61,39 @@ def municipios_do_estado(caminho: Path) -> dict[str, object]:
 def geometria_municipio(caminho_estado: Path, municipio: str):
     return municipios_do_estado(Path(caminho_estado)).get(chave_nome(municipio))
 
+
+
+@lru_cache(maxsize=4)
+def municipios_simplificados(caminho: Path, tolerancia: float = 0.002) -> tuple[tuple[str, str, object], ...]:
+    """(NM_MUN como no IBGE, SIGLA_UF, geometria simplificada a ~200 m) — limites do mapa interativo."""
+    if not Path(caminho).exists():
+        return ()
+    return tuple(
+        (str(f["properties"]["NM_MUN"]), str(f["properties"].get("SIGLA_UF", "")),
+         shape(f["geometry"]).simplify(tolerancia, preserve_topology=True))
+        for f in _ler_geojson(caminho).get("features", [])
+        if f.get("geometry") and f.get("properties", {}).get("NM_MUN"))
+
+
+@lru_cache(maxsize=1)
+def limites_uf(caminho: Path | None = None) -> dict[str, tuple[str, object]]:
+    """SIGLA_UF → (nome do estado, contorno simplificado), de ``referencia/limites_uf.geojson``."""
+    caminho = Path(caminho or LIMITES_UF_GEOJSON)
+    if not caminho.exists():
+        return {}
+    return {f["properties"]["SIGLA_UF"]: (f["properties"]["NM_UF"], shape(f["geometry"]))
+            for f in _ler_geojson(caminho)["features"]}
+
+
+def caminho_do_estado(sigla: str | None) -> Path | None:
+    """Arquivo ``NM_UF_<Estado>.geojson`` do estado pela sigla (via ``referencia/limites_uf.geojson``)."""
+    nome = limites_uf().get(sigla or "", (None,))[0]
+    return estados_disponiveis().get(nome) if nome else None
+
+
+def sigla_do_estado(caminho_estado: Path) -> str | None:
+    municipios = municipios_simplificados(Path(caminho_estado))
+    return municipios[0][1] if municipios else None
 
 @lru_cache(maxsize=1)
 def _municipios_brasil(pasta: Path, assinatura: tuple) -> tuple[list[tuple[str, str, str]], list]:

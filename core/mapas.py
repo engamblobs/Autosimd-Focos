@@ -323,3 +323,170 @@ def mapa_recorrencia_mes(rec, poligono, nome: str, dia):
     fig.tight_layout(rect=(0, 0.04, 1, 1))
     _nota(fig, nota_grade(rec.grade), centro=True)
     return fig
+
+
+# ------------------------------------------------------ Mapa de localização
+
+COR_UF_DESTAQUE = "#FFB74D"
+COR_TERRITORIO_LOCALIZACAO = "#D32F2F"
+
+
+def _preencher(ax, geom, **estilo):
+    from matplotlib.patches import Polygon as PoligonoMpl
+
+    for parte in poligonos_de(geom):
+        ax.add_patch(PoligonoMpl(np.asarray(parte.exterior.coords), closed=True, **estilo))
+
+
+def mapa_localizacao(sigla_uf: str | None, territorio, nome: str, municipios=(), ufs: dict | None = None):
+    """Onde fica o território: o Brasil com o estado destacado (e um retângulo no território) e o estado com os
+    limites municipais e o território em vermelho. ``municipios`` = (NM_MUN, SIGLA_UF, geometria);
+    ``ufs`` = ``territorios.limites_uf()``."""
+    from matplotlib.patches import Rectangle
+
+    from core.territorios import limites_uf
+
+    ufs = limites_uf() if ufs is None else ufs
+    fig, (ax_br, ax_uf) = plt.subplots(1, 2, figsize=(10, 4.6), dpi=150, gridspec_kw={"width_ratios": [1, 1.25]})
+    for ax in (ax_br, ax_uf):
+        ax.set_facecolor("#EAF2F8")
+        ax.set_xticks([])
+        ax.set_yticks([])
+    for sigla, (_, geom) in ufs.items():
+        destaque = sigla == sigla_uf
+        _preencher(ax_br, geom, facecolor=COR_UF_DESTAQUE if destaque else "#F5F5F5", edgecolor="#757575",
+                   linewidth=0.8 if destaque else 0.4, zorder=3 if destaque else 2)
+        c = geom.representative_point()
+        ax_br.text(c.x, c.y, sigla, fontsize=5, ha="center", va="center", color="#424242", zorder=4)
+    if territorio is not None:
+        x0, y0, x1, y1 = territorio.bounds
+        lado = max(x1 - x0, y1 - y0, 0.6)            # territórios pequenos: retângulo visível no Brasil
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        ax_br.add_patch(Rectangle((cx - lado / 2, cy - lado / 2), lado, lado, fill=False,
+                                  edgecolor=COR_TERRITORIO_LOCALIZACAO, linewidth=1.4, zorder=5))
+    ax_br.set_xlim(-74.5, -34)
+    ax_br.set_ylim(-34.5, 6)
+    ax_br.set_aspect("equal")
+    ax_br.set_title("Brasil", fontsize=9, fontweight="bold")
+
+    uf = ufs.get(sigla_uf)
+    if uf is not None:
+        _preencher(ax_uf, uf[1], facecolor="#FFF3E0", edgecolor="#5D4037", linewidth=1.0, zorder=1)
+    for _, _, geom in municipios:
+        for parte in poligonos_de(geom):
+            x, y = parte.exterior.xy
+            ax_uf.plot(x, y, color="#BDBDBD", linewidth=0.3, zorder=2)
+    if territorio is not None:
+        _preencher(ax_uf, territorio, facecolor=COR_TERRITORIO_LOCALIZACAO, edgecolor="#7F0000", linewidth=0.8,
+                   alpha=0.85, zorder=3)
+    referencia = uf[1] if uf is not None else territorio
+    if referencia is not None:
+        x0, y0, x1, y1 = referencia.bounds
+        mx, my = (x1 - x0) * 0.04, (y1 - y0) * 0.04
+        ax_uf.set_xlim(x0 - mx, x1 + mx)
+        ax_uf.set_ylim(y0 - my, y1 + my)
+        ax_uf.set_aspect(1 / np.cos(np.radians((y0 + y1) / 2)))
+        if territorio is not None:                    # seta com o nome, do centro do estado para o território
+            alvo = territorio.representative_point()
+            centro = referencia.representative_point()
+            texto = (alvo.x + (centro.x - alvo.x) * 0.55, alvo.y + (centro.y - alvo.y) * 0.55)
+            ax_uf.annotate(nome, xy=(alvo.x, alvo.y), xytext=texto, fontsize=8, fontweight="bold", ha="center",
+                           color="#7F0000", zorder=6,
+                           bbox={"boxstyle": "round,pad=0.25", "facecolor": "white", "edgecolor": "#7F0000"},
+                           arrowprops={"arrowstyle": "-|>", "color": "#7F0000", "linewidth": 1.2})
+    ax_uf.set_title(f"{uf[0] if uf is not None else ''} — {nome}", fontsize=9, fontweight="bold")
+    ax_uf.legend(handles=[Patch(facecolor=COR_TERRITORIO_LOCALIZACAO, edgecolor="#7F0000", label=nome),
+                          Line2D([], [], color="#BDBDBD", linewidth=0.8, label="Limites municipais")],
+                 loc="lower left", fontsize=7, frameon=True, framealpha=0.9)
+    fig.suptitle(f"Localização — {nome}", fontsize=11, fontweight="bold")
+    fig.tight_layout()
+    return fig
+
+
+# ---------------------------------------------------------- Mapas de anomalia
+
+# Classes da anomalia: −∞ −3 −2 −1 | 1 2 3 +∞ ; com SINAL_ANOMALIA = −1 as negativas (mais focos) são vermelhas
+LIMITES_ANOMALIA = [-99, -3, -2, -1, 1, 2, 3, 99]
+CORES_ANOMALIA = ["#67000D", "#EF3B2C", "#FCBBA1", "#FFFFFF", "#9ECAE1", "#2171B5", "#08306B"]
+VERDE_5, VERDE_1 = "#81C784", "#1B5E20"           # borda dos pontos: 5% (clara) e 1% (escura)
+COR_GRUPO_MAIS, COR_GRUPO_MENOS = "#C62828", "#1565C0"
+ROTULOS_ANOMALIA = ["≤ −3\nextrema", "−3 a −2\nforte", "−2 a −1\nmoderada", "comum\n|a| < 1", "1 a 2\nmoderada",
+                    "2 a 3\nforte", "≥ 3\nextrema"]
+TITULOS_ANOMALIA = {
+    "quantidade": ("Anomalia de QUANTIDADE", "a célula tem mais (vermelho) ou menos (azul) focos do que costuma ter "
+                                             "nestas datas"),
+    "localizacao": ("Anomalia de LOCALIZAÇÃO", "descontado o total, os focos caíram onde não costumam cair "
+                                               "(vermelho) ou faltaram onde costumam (azul)"),
+    "combinada": ("Anomalia COMBINADA (quantidade e localização)", "Stouffer–Strube: (z_Q + z_L)/√(2 + 2ρ)"),
+}
+
+
+def mapa_anomalia(an, tipo: str, poligono, nome: str, compacto: bool = False):
+    """Uma das três anomalias (``core/anomalias.py``) na grade proporcional, com pontos nas células
+    significativas (q < 5% e q < 1%, Benjamini–Hochberg). ``compacto``: versão pequena, sem a frase explicativa
+    nem a legenda de significância (ao lado da sazonalidade, no PDF do cenário)."""
+    from matplotlib.colors import BoundaryNorm, ListedColormap
+
+    from matplotlib import patheffects as efeitos
+
+    from core.anomalias import DISTANCIA_GRUPO_KM, NIVEIS_SIGNIFICANCIA, grupos_significativos
+
+    fig, ax = plt.subplots(figsize=(4.6, 4.4) if compacto else (9, 7.6), dpi=150)
+    fig.subplots_adjust(top=0.86, bottom=0.24 if compacto else 0.2)
+    _acabamento(ax)
+    desenhar_limite(ax, poligono)
+    valores = getattr(an, tipo)
+    cmap, norm = ListedColormap(CORES_ANOMALIA), BoundaryNorm(LIMITES_ANOMALIA, len(CORES_ANOMALIA))
+    x, y = np.meshgrid(an.grade.x, an.grade.y)
+    malha = ax.pcolormesh(x, y, np.ma.masked_where(~an.informativas, valores).T, cmap=cmap, norm=norm, zorder=2,
+                          edgecolors="none")
+    cx, cy = np.meshgrid((an.grade.x[:-1] + an.grade.x[1:]) / 2, (an.grade.y[:-1] + an.grade.y[1:]) / 2,
+                         indexing="ij")
+    n5, n1 = NIVEIS_SIGNIFICANCIA
+    so_5 = an.significativas(tipo, n5) & ~an.significativas(tipo, n1)
+    so_1 = an.significativas(tipo, n1)
+    # pontos com a cor da própria célula (não escondem a anomalia) e borda verde: clara a 5%, escura a 1%
+    for selecao, tamanho, borda, espessura in ((so_5, 16, VERDE_5, 0.9), (so_1, 30, VERDE_1, 1.6)):
+        ax.scatter(cx[selecao], cy[selecao], s=tamanho, c=cmap(norm(valores[selecao])), edgecolors=borda,
+                   linewidths=espessura, zorder=5)
+    for grupo in grupos_significativos(an, tipo):        # contorno dos grupos a 1% (até 20 km entre células)
+        for parte in poligonos_de(grupo["poligono"]):
+            gx, gy = parte.exterior.xy
+            ax.plot(gx, gy, color=COR_GRUPO_MAIS if grupo["mais_focos"] else COR_GRUPO_MENOS, linewidth=1.1,
+                    zorder=6, path_effects=[efeitos.Stroke(linewidth=2.6, foreground="white"), efeitos.Normal()])
+    titulo, explicacao = TITULOS_ANOMALIA[tipo]
+    km = fmt_numero(an.grade.tamanho_km, 2).rstrip("0").rstrip(",")
+    if compacto:
+        ax.tick_params(labelsize=5.5)
+        ax.set_title(f"Anomalia combinada — {nome}\n{an.inicio:%d/%m} a {an.fim:%d/%m/%Y} × {an.anos[0]}–"
+                     f"{an.anos[-1]} (grade {km} km)", fontsize=7.5, fontweight="bold")
+        barra = fig.colorbar(malha, cax=fig.add_axes((0.12, 0.1, 0.76, 0.03)), orientation="horizontal",
+                             spacing="uniform", ticks=[-51, -2.5, -1.5, 0, 1.5, 2.5, 51])
+        barra.ax.set_xticklabels(["≤−3", "−3/−2", "−2/−1", "comum", "1/2", "2/3", "≥3"], fontsize=5.5)
+        barra.set_label("negativa = mais focos · pontos = significativa (5%, 1%)", fontsize=5.5)
+        return fig
+    ax.set_title(f"{titulo} — {nome}\n{an.inicio:%d/%m/%Y} a {an.fim:%d/%m/%Y} × mesmas datas de "
+                 f"{an.anos[0]}–{an.anos[-1]} (grade {km} × {km} km)" if an.anos else titulo,
+                 fontsize=10, fontweight="bold", pad=16)
+    ax.text(0.5, 1.01, explicacao, transform=ax.transAxes, ha="center", va="bottom", fontsize=7.5,
+            color="#455A64")
+    barra = fig.colorbar(malha, cax=fig.add_axes((0.15, 0.09, 0.7, 0.025)), orientation="horizontal",
+                         spacing="uniform", ticks=[-51, -2.5, -1.5, 0, 1.5, 2.5, 51])
+    barra.ax.set_xticklabels(ROTULOS_ANOMALIA, fontsize=7)
+    barra.set_label("Anomalia (desvios padrão): negativa = mais focos que o comum, positiva = menos", fontsize=7.5)
+    ax.legend(handles=[
+        Line2D([], [], marker="o", color="none", markerfacecolor="#EEEEEE", markeredgecolor=VERDE_5,
+               markeredgewidth=0.9, markersize=3.8,
+               label=f"significativa a {fmt_numero(n5 * 100)}% (q < {fmt_numero(n5, 2)})"),
+        Line2D([], [], marker="o", color="none", markerfacecolor="#EEEEEE", markeredgecolor=VERDE_1,
+               markeredgewidth=1.6, markersize=5.4,
+               label=f"significativa a {fmt_numero(n1 * 100)}% (q < {fmt_numero(n1, 2)})"),
+        Line2D([], [], color=COR_GRUPO_MAIS, linewidth=1.1,
+               label=f"grupo a 1% (até {DISTANCIA_GRUPO_KM} km) — mais focos"),
+        Line2D([], [], color=COR_GRUPO_MENOS, linewidth=1.1,
+               label=f"grupo a 1% (até {DISTANCIA_GRUPO_KM} km) — menos focos")],
+        loc="lower left", fontsize=6.5, framealpha=0.9, title="Significância (Benjamini–Hochberg)", title_fontsize=6.5)
+    _nota(fig, f"Total do período: {fmt_inteiro(an.total_atual)} focos × média {fmt_numero(an.total_medio, 1)} "
+               f"nas mesmas datas; anomalia do território = {fmt_numero(an.anomalia_total, 2)}. Células vazias: sem "
+               "foco no período nem no histórico.", centro=True)
+    return fig

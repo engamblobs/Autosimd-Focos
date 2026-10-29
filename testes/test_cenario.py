@@ -74,7 +74,7 @@ def test_indicadores_e_pdf(df, para):
 
 def test_serie_semanal_do_nowcast(df, para):
     s = para.nowcast.semanal
-    assert len(s) == 52 and s["fim"].iloc[-1] == date(2024, 12, 31)
+    assert len(s) == 13 and s["fim"].iloc[-1] == date(2024, 12, 31)
     assert ((s["fim"] - s["inicio"]).map(lambda d: d.days) == 6).all()
     pa = df[df["SIGLA_UF"] == "PA"]
     assert s["focos"].iloc[-1] == ((pa["data"] >= "2024-12-25") & (pa["data"] <= "2024-12-31")).sum()
@@ -112,3 +112,36 @@ def test_exportacao_geojson(df):
     assert all(x["properties"]["unidade_conservacao"] != "NONE" for x in geo["features"])   # vazio = null
     xingu = focos_no_intervalo(df, "Pará", "Região Xingu", date(2024, 9, 1), date(2024, 9, 7))
     assert set(xingu["regiao"]) <= {"Região Xingu"} and len(xingu) <= len(focos)
+
+
+def test_texto_e_municipios_acima_da_maxima(df, para):
+    from core.cenario import em_territorio, texto_do_cenario
+    from core.panorama import COLUNAS_ACIMA, estatisticas_dos_municipios, panorama_estado
+
+    assert em_territorio("Pará") == "no Pará" and em_territorio("Bahia") == "na Bahia"
+    assert em_territorio("Goiás") == "em Goiás" and em_territorio("Região Xingu") == "na Região Xingu"
+    pan = panorama_estado(df, "Pará", 2023, 2024, TODAS, cobertura_base(df)[0])
+    acima = pan.acima_no_mes
+    assert list(acima.columns) == COLUNAS_ACIMA
+    assert (acima["Focos no mês"] > acima["Máxima anterior"]).all()
+    textos = texto_do_cenario(para, acima, pan.anos_recorde)
+    assert textos[0].startswith("Na passagem mais recente do satélite de referência (31/12/2024)")
+    assert "no Pará" in textos[0]
+    assert any("máxima histórica" in t for t in textos)
+    assert not any("fim do relatório" in t for t in textos)                     # só no PDF
+    est = estatisticas_dos_municipios(pan.focos, list(acima["Município"])[:2], 2023, 2024, cobertura_base(df))
+    limite = limite_da_regiao(estados_disponiveis()["Pará"], "PA", None)
+    pngs = {}
+    pdf, nome = gerar_relatorio_cenario(para, limite, acima_no_mes=acima, anos_recorde=pan.anos_recorde,
+                                        sazonalidades=est, pngs=pngs)
+    assert pdf.startswith(b"%PDF") and all(f"sazonalidade_{m}" in pngs for m in est)
+
+    import io
+    import zipfile
+
+    from core.relatorio_cenario import pacote_cenario
+    zip_, nome_zip = pacote_cenario(para, pdf, nome, pngs, acima, {"type": "FeatureCollection", "features": []})
+    arquivos = zipfile.ZipFile(io.BytesIO(zip_)).namelist()
+    assert nome_zip == "Cenario_Completo_Para_20241231.zip" and nome in arquivos and "metadados.json" in arquivos
+    assert "tabelas/municipios_acima_da_maxima_no_mes.csv" in arquivos
+    assert any(a.startswith("imagens/sazonalidade_") for a in arquivos)

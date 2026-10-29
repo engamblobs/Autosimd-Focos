@@ -30,12 +30,15 @@ Cada incremento é um pedido separado ao Claude. Só avançar quando o anterior 
 | 13 | Cenário atual no Panorama do Estado | Últimas 24 h (última passagem) e última semana do estado ou da região, com mapa, gráfico, municípios, UCs/TIs e o PDF do cenário (`docs/07` §11, `docs/10` §8) | ✔ 2026-10-26 (134 testes) |
 | 14 | Ajustes para a v0.12 | Atalho com a versão; legenda do acumulado com a janela do mais/menos intenso (nota abaixo do gráfico removida); zero sem destaque na tabela mês a mês; grade proporcional ao território (10/5/2,5/1,25 km); kernel em UC/TI pequena (APA Pedregulho) sem erro; comparativos semestrais em semanas; rodapé no modelo do HIDRO | ✔ 2026-10-28 (137 testes) |
 | 15 | Rodada 6 respondida e PDF do cenário completo | Gráfico de 52 semanas (diagnóstico e cenário); PDF do cenário com gráficos dos focos, recorrência do mês × focos atuais e estatísticas no fim; GeoJSON dos focos por intervalo de datas (P29); grade de 10 km + proporcional no pacote (P31); notas justificadas e mapa centralizado | ✔ 2026-10-28 |
+| 16 | Mapas interativos e de localização | Mapa interativo (zoom, quadrícula do mês, limites municipais, clique = diagnóstico) no Panorama, no cenário atual do diagnóstico (município, UC, TI) e na abertura do Diagnóstico; mapa de localização na tela e nos PDFs; protótipo dos mapas de desvio para aprovação (P32) | ✔ 2026-10-29 |
+| 17 | Anomalias e ajustes da rodada 7 | Anomalias de quantidade, localização e combinada com significância (Benjamini–Hochberg) nos PDFs; semanas do último trimestre com faixas dos meses (Panorama no lugar do gráfico de 30 dias); recordes nas tabelas do Panorama; mapa interativo só na abertura do Diagnóstico; cabeçalho com versão e SIMD (também no DESASTRE, DESASTRE 2 e HIDRO) | ✔ 2026-10-29 |
+| 18 | Rodada 8 | Grupos de células significativas contornados, pontos com a cor da célula e bordas verdes; grade de 10 km nas anomalias do cenário; anomalias na tela; recorde do ano de referência na tabela mês a mês; tabela com todos os municípios; municípios acima da máxima no mês, texto do cenário, sazonalidades e pacote completo do cenário | ✔ 2026-10-29 |
 
 ## Próximos incrementos (propostos — dependem de `docs/09`)
 
 | # | Incremento | Depende de |
 |---|---|---|
-| 16 | (a definir com o usuário) | — |
+| 19 | (a definir com o usuário) | — |
 
 ## Modelo de pedido ao Claude
 

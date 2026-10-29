@@ -28,7 +28,9 @@ Autosimd-Focos 2/                  # pasta de trabalho; o projeto continua se ch
 │   ├── kernel.py                  # densidade de kernel gaussiano (numpy)
 │   ├── fundo_satelite.py          # tiles do Google Satélite para o mapa do cenário atual
 │   ├── graficos.py                # top do estado, evolução, sazonalidade
-│   ├── mapas.py                   # mapas 1 a 4
+│   ├── mapas.py                   # mapas 1 a 4, localização, recorrência do mês (matplotlib: PDF/PNG)
+│   ├── mapa_interativo.py         # mapa interativo da tela (pydeck): focos recentes, quadrícula, municípios
+│   ├── anomalias.py               # anomalias de quantidade, localização e combinada, com significância (P32)
 │   ├── relatorio_pdf.py           # PDF do diagnóstico municipal
 │   ├── relatorio_cenario.py       # PDF do cenário atual do estado/região
 │   └── produto.py                 # figuras + Excel + metadados + pacote .zip
@@ -36,6 +38,7 @@ Autosimd-Focos 2/                  # pasta de trabalho; o projeto continua se ch
 ├── referencia/                    # tabelas fixas versionadas no git
 │   ├── municipios_pa.csv          # IBGE, nome, Região de Integração (a mesma do AutoSIMD-DESASTRE)
 │   ├── municipios_br.csv          # 5.573 municípios com Região Geográfica Imediata/Intermediária (IBGE 2017)
+│   ├── limites_uf.geojson         # contorno simplificado dos 27 estados (mapa de localização)
 │   ├── fontes/                    # planilha do IBGE das Regiões Geográficas (origem do municipios_br.csv)
 │   └── logos/                     # AUTOSIMD-FOCOS.png, AutoSIMD-FOCOS.ico, CBM-CEDEC.png
 │
@@ -48,6 +51,7 @@ Autosimd-Focos 2/                  # pasta de trabalho; o projeto continua se ch
 │   ├── atualizar_base_inpe.py              # mesma atualização do programa, pela linha de comando (aceita pasta local)
 │   ├── verificar_base.py                   # confere se NM_MUN/UF/UC/TI da base = cruzamento com os polígonos
 │   ├── gerar_municipios_br.py              # gera referencia/municipios_br.csv (Regiões Imediatas)
+│   ├── gerar_limites_uf.py                 # gera referencia/limites_uf.geojson (contorno dos estados)
 │   └── gerar_amostras.py                   # gera amostras/bases a partir de BASES_GEOJSON
 ├── empacotamento/                 # pasta portátil Windows (padrão AutoSIMD-DESASTRE)
 │   ├── empacotar_windows.py       # monta dist/AutoSIMD-FOCOS_v<versão>/ e o .zip

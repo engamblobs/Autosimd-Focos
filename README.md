@@ -9,7 +9,7 @@ Sala de Informações e Monitoramento de Desastres (SIMD) — Coordenadoria Esta
 
 O AutoSIMD-FOCOS automatiza a análise histórica de focos de calor detectados por satélite (BDQueimadas/INPE) e gera, em poucos segundos, um diagnóstico territorial pronto para apoiar o planejamento de prevenção e combate a incêndios florestais.
 
-Situação: **v0.12 (29/10/2026)** — cenário atual do estado no Panorama (últimas 24 h e última semana, PDF do cenário com gráficos, recorrência do mês e estatísticas; focos em GeoJSON por intervalo de datas), gráfico das últimas 52 semanas, grade proporcional ao território, comparativos semestrais em semanas e pacote Windows com verificação de integridade (SHA256). A v0.11 (22/10/2026) reorganizou o v0.10 no modelo do AutoSIMD-DESASTRE. Testes: `python -m pytest`.
+Situação: **v0.13 (29/10/2026)** — mapas de anomalia de focos (quantidade, localização e combinada, com teste de significância), mapa interativo na abertura do Diagnóstico (clique no município = diagnóstico), mapa de localização, municípios acima da máxima histórica do mês com texto do cenário e pacote completo do cenário, recordes destacados nas tabelas e gráfico semanal do último trimestre. A v0.12 trouxe o cenário atual do estado e o pacote Windows verificado (SHA256); a v0.11 reorganizou o v0.10 no modelo do AutoSIMD-DESASTRE.
 
 > [!IMPORTANT]
 > **Desenvolvido com Inteligência Artificial.** Todo o código deste programa foi desenvolvido com a utilização de ferramentas de Inteligência Artificial, com acompanhamento, revisão e testes realizados pelos técnicos de Defesa Civil da CEDEC/PA. Os resultados são produzidos automaticamente a partir de bases públicas oficiais e devem ser interpretados por profissionais habilitados. A identidade visual (logo do AutoSIMD-FOCOS) também foi gerada com IA (ChatGPT).
@@ -20,7 +20,7 @@ Você escolhe **o território** e **o período de anos**, clica em **Processar D
 
 - **Resumo executivo** — focos no ano, posição no ranking nacional e estadual do ano, participação no total do estado, variação em relação ao ano anterior e **densidade média anual (focos/km²/ano)**.
 - **Gráficos** — Top 5 municípios do estado, evolução anual dos focos e padrão sazonal (distribuição mensal).
-- **Mapas** — densidade de kernel dos focos no último ano (com as UCs e TIs do município) e no período, recorrência em grade proporcional ao território (10 km a 1,25 km), migração sazonal por trimestre e o cenário atual sobre imagem de satélite.
+- **Mapas** — densidade de kernel dos focos no último ano (com as UCs e TIs do município) e no período, recorrência em grade proporcional ao território (10 km a 1,25 km), migração sazonal por trimestre e o cenário atual sobre imagem de satélite. Mapa de localização (Brasil → estado → território) e **mapas de anomalia** (mais ou menos focos que o comum nas mesmas datas, em quantidade e localização, com as células estatisticamente significativas marcadas).
 - **Tabelas** — ranking estadual, comparativo na Região de Integração do Pará e focos por UC/TI no município.
 - **Estatísticas no modelo do Programa Queimadas/INPE** (município, UC e TI) — focos mês a mês e dia a dia, comparativos mensal, semanal e por semestre com mínimo, média e máximo, e o acumulado mensal com faixa p10–p90, em gráficos interativos com parâmetros ajustáveis.
 - **Cenário atual (nowcast)** — focos do último dia, dos últimos 7 e 30 dias e do ano no município, comparados com os mesmos dias dos anos anteriores, com mapa e lista dos focos recentes.

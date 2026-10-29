@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 
 DIAS_SERIE = 30
-SEMANAS_SERIE = 52        # focos por semana no último ano (blocos de 7 dias até o último dia)
+SEMANAS_SERIE = 13        # focos por semana no último trimestre (blocos de 7 dias até o último dia)
 MEIA_JANELA = 3            # janela de 7 dias: o dia ±3
 FAIXAS_IDADE = [(0, 0, "Último dia"), (1, 2, "1–2 dias antes"), (3, 6, "3–6 dias antes"), (7, 29, "7–29 dias antes")]
 
@@ -28,7 +28,7 @@ class Nowcast:
     serie: pd.DataFrame                    # data, focos, media, maximo (mesmo dia), media_janela (±3 dias)
     anos_comparados: list[int]
     indicadores: dict
-    semanal: pd.DataFrame = field(default_factory=pd.DataFrame)   # inicio, fim, focos, media, maximo (mesma semana)
+    semanal: pd.DataFrame = field(default_factory=pd.DataFrame)   # 13 semanas: inicio, fim, focos, media, maximo
 
     def recentes(self, dias: int) -> pd.DataFrame:
         return self.focos[self.focos["dias_atras"] < dias]
@@ -112,7 +112,7 @@ def _anos_antes(dia: date, anos: int) -> date:
 
 def serie_semanal(por_dia: pd.Series, ultimo_dia: date, primeiro_ano_completo: int,
                   semanas: int = SEMANAS_SERIE) -> pd.DataFrame:
-    """Focos por semana (7 dias corridos terminando no último dia) no último ano × a mesma semana nos anos
+    """Focos por semana (7 dias corridos terminando no último dia) no último trimestre × a mesma semana nos anos
     anteriores que a base cobre por inteiro: média e máximo."""
     contagem = por_dia.to_dict()
 

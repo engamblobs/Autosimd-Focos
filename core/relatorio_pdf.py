@@ -32,6 +32,7 @@ from core.diagnostico import DiagnosticoMunicipio
 from core.estatisticas import (
     MESES_CURTOS, EstatisticasMunicipio, extremos_por_coluna, notas, tabela_diaria_exibicao, tabela_mensal_exibicao,
 )
+from core.anomalias import TEXTO_METODOLOGIA
 from core.grade import grade_do_territorio, nota_grade
 from core.kernel import DESVIO_KERNEL_KM
 from core.territorios import area_km2
@@ -269,11 +270,24 @@ def mapas_pdf(figuras: dict, est: dict) -> list:
     return elementos
 
 
+def anomalias_pdf(figuras: dict, est: dict) -> list:
+    """Os três mapas de anomalia (docs/07 §12) com a nota de como ler e a metodologia."""
+    chaves = [c for c in ("anomalia_quantidade", "anomalia_localizacao", "anomalia_combinada") if figuras.get(c)]
+    if not chaves:
+        return []
+    elementos = [PageBreak(), Paragraph("Anomalias de Focos de Calor em relação à recorrência comum", est["secao"]),
+                 Paragraph(TEXTO_METODOLOGIA, est["nota"]), Spacer(1, 6)]
+    for chave in chaves:
+        elementos += [imagem_figura(figuras[chave], 430), Spacer(1, 6)]
+    return elementos
+
+
 def _valor(v) -> str:
     return "-" if v is None or v != v else fmt_numero(v)
 
 
-def tabela_estatistica_pdf(tabela, larguras: list[float], linhas_destaque: list[str], fonte: float = 6.5) -> Table:
+def tabela_estatistica_pdf(tabela, larguras: list[float], linhas_destaque: list[str], fonte: float = 6.5,
+                           recorde: str | None = None) -> Table:
     """Tabela com o menor valor de cada coluna em amarelo e o maior em vermelho (só entre ``linhas_destaque``);
     linhas Mínimo/Média/Máximo com fundo colorido."""
     cabecalho = [tabela.index.name or ""] + [str(c) for c in tabela.columns]
@@ -289,7 +303,7 @@ def tabela_estatistica_pdf(tabela, larguras: list[float], linhas_destaque: list[
         ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5),
     ]
     indice = {nome: i + 1 for i, nome in enumerate(tabela.index)}
-    for j, (minimos, maximos) in enumerate(extremos_por_coluna(tabela, linhas_destaque).values(), start=1):
+    for j, (minimos, maximos) in enumerate(extremos_por_coluna(tabela, linhas_destaque, recorde).values(), start=1):
         for nome in minimos:
             estilo += [("BACKGROUND", (j, indice[nome]), (j, indice[nome]), AMARELO_MINIMO),
                        ("FONTNAME", (j, indice[nome]), (j, indice[nome]), "Helvetica-Bold")]
@@ -323,7 +337,7 @@ def estatisticas_pdf(est: EstatisticasMunicipio, figuras: dict, estilos: dict) -
     elementos += [
         Paragraph(f"<b>Total de focos detectados em cada mês ({est.ano_inicio}–{est.ano_fim})</b>",
                   estilos["celula_cab"]), Spacer(1, 3),
-        tabela_estatistica_pdf(mensal, [38] + [37] * 12 + [53], anos), Spacer(1, 8),
+        tabela_estatistica_pdf(mensal, [38] + [37] * 12 + [53], anos, recorde=str(est.ano_referencia)), Spacer(1, 8),
     ]
     diario = tabela_diaria_exibicao(est)
     if not diario.empty:
@@ -427,10 +441,13 @@ def gerar_pdf(diag, figuras: dict, est: EstatisticasMunicipio | None = None, now
     historia = cabecalho_pdf(f"{APP_NOME} — {titulo}", f"{diag.municipio} ({diag.ano_inicio} - {diag.ano_fim})",
                              estilos)
     historia += resumo_executivo(diag, estilos)
+    if figuras.get("localizacao") is not None:
+        historia += [imagem_figura(figuras["localizacao"], 470), Spacer(1, 8)]
     if nowcast is not None:
         historia += nowcast_pdf(nowcast, figuras, estilos)
     historia += graficos_pdf(figuras, estilos)
     historia += mapas_pdf(figuras, estilos)
+    historia += anomalias_pdf(figuras, estilos)
     if est is not None:
         historia += estatisticas_pdf(est, figuras, estilos) + [PageBreak()]
     historia += tabelas_e_notas(diag, estilos)

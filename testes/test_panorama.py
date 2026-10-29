@@ -73,3 +73,17 @@ def test_limite_da_regiao():
     assert limite_da_regiao(caminho, "PA", None) is not None
     assert limite_da_regiao(caminho, "PA", "Região Xingu") is not None          # Altamira na amostra
     assert limite_da_regiao(caminho, "PA", "Região Guajará") is None            # sem limite na amostra
+
+
+def test_recordes_acima_da_maxima_historica(df, para):
+    """Célula destacada = valor do ano final acima do maior valor das mesmas datas nos anos anteriores."""
+    from core.panorama import maximos_historicos
+
+    assert para.anos_recorde == (2023, 2023)                       # amostra: 2023 é o único ano anterior completo
+    r, t = para.recordes_municipios, para.ranking_municipios
+    assert r.shape == t.shape and not r["Município"].any() and not r[[c for c in t if "Acumulado" in c]].any().any()
+    maximos = maximos_historicos(para.focos, "NM_MUN", para.fim_dados, [2023])
+    coluna = [c for c in t if c.startswith("Focos (")][0]
+    for i, linha in t.iterrows():
+        assert r.loc[i, coluna] == (linha[coluna] > maximos["ano"].get(linha["Município"].upper(), 0))
+    assert para.recordes_regiao is not None and para.recordes_regiao.shape == para.por_regiao.shape

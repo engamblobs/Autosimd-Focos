@@ -20,8 +20,10 @@ O AutoSIMD-FOCOS **não tem banco de dados próprio**: lê as bases de `BASES_GE
 | `DiagnosticoArea` | Tipo (UC/TI), rótulo, polígono, focos da área no período, séries anual e mensal |
 | `produto.Pacote` | Nome do .zip, bytes do .zip e do PDF |
 | `estatisticas.EstatisticasMunicipio` | Tabelas e séries no modelo INPE (`docs/07` §8) |
-| `nowcast.Nowcast` | Últimos 30 dias do município, comparação com o mesmo dia dos anos anteriores, focos recentes; `semanal` = últimas 52 semanas (`inicio`, `fim`, `focos`, `media`, `maximo`) (`docs/07` §9) |
+| `nowcast.Nowcast` | Últimos 30 dias do município, comparação com o mesmo dia dos anos anteriores, focos recentes; `semanal` = últimas 13 semanas (último trimestre) (`inicio`, `fim`, `focos`, `media`, `maximo`) (`docs/07` §9) |
 | `cenario.CenarioAtual` | Cenário do estado/região: dia da passagem, focos das 24 h e da semana, municípios, UCs/TIs, nowcast; `historico_mes` = focos (`lon`, `lat`, `ano`) do mês da passagem nos anos comparados (`docs/07` §11) |
+| `anomalias.Anomalias` | Grade, período (mês…ano), datas, anos, focos atuais e média histórica por célula, as três anomalias (com o sinal do programa), valores-q de Benjamini–Hochberg, totais e ρ (`docs/07` §12) |
+| `panorama.PanoramaEstado` (`recordes_regiao`, `recordes_municipios`, `anos_recorde`, `acima_no_mes`) | Máscaras das células das tabelas acima da máxima histórica e a tabela dos municípios acima da máxima no mês (`Município`, `Região`, `Focos no mês`, `Máxima anterior`, `Ano da máxima`, `Vezes a máxima`) (`docs/07` §10); `ranking_municipios` tem todos os municípios com focos no ano |
 | `cenario.RecorrenciaDoMes` | Grade proporcional, nº de anos com foco no mês por célula e os focos da semana com a recorrência da célula onde caíram (`docs/07` §11) |
 | `atualizacao.ResultadoAtualizacao` | Situação da busca no INPE, focos novos, dias, provisórios |
 

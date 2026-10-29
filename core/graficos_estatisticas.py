@@ -137,8 +137,9 @@ def grafico_sazonalidade(est: EstatisticasMunicipio):
     ax.yaxis.set_major_formatter(FuncFormatter(fmt_milhar_eixo))
     ax.set_ylabel("Focos no mês", fontsize=8)
     ax.grid(axis="y", linestyle=":", alpha=0.4, zorder=0)
-    ax.set_title(f"Sazonalidade Mensal de Focos de Calor — média, p{p.percentil_inferior}–p{p.percentil_superior} "
-                 f"e {est.ano_referencia}", fontsize=11, fontweight="bold")
+    ax.set_title(f"Sazonalidade Mensal de Focos de Calor — {est.municipio.title()}\nmédia, "
+                 f"p{p.percentil_inferior}–p{p.percentil_superior} e {est.ano_referencia}", fontsize=11,
+                 fontweight="bold")
     ax.legend(fontsize=7.5, frameon=False, loc="upper left")
     fig.tight_layout()
     return fig
@@ -263,31 +264,109 @@ def grafico_nowcast(nowcast):
     return fig
 
 
+MESES_FAIXA = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro",
+               "Novembro", "Dezembro"]
+CORES_FAIXA = ("#ECEFF1", "#FFFFFF")
+LARGURA_MIN_ROTULO = 0.6                 # em semanas
+
+
+def faixas_dos_meses(semanal) -> list[tuple[float, float, str]]:
+    """(início, fim, mês) de cada mês na escala do gráfico semanal: a semana k ocupa de k − 0,5 a k + 0,5
+    (do seu 1º ao 7º dia), então cada data tem uma posição contínua e a troca de mês cai no lugar certo."""
+    from datetime import date, timedelta
+
+    inicio0, fim = semanal["inicio"].iloc[0], semanal["fim"].iloc[-1]
+
+    def posicao(d):
+        return (d - inicio0).days / 7 - 0.5
+
+    faixas, d = [], inicio0
+    while d <= fim:
+        proximo = date(d.year + d.month // 12, d.month % 12 + 1, 1)
+        faixas.append((posicao(d), posicao(min(proximo, fim + timedelta(days=1))), MESES_FAIXA[d.month - 1]))
+        d = proximo
+    return faixas
+
+
 def grafico_nowcast_semanal(nowcast):
-    """Focos por semana no último ano × máximo e média da mesma semana nos anos anteriores (PDF e PNG)."""
+    """Focos por semana no último trimestre × máximo e média da mesma semana nos anos anteriores, com faixas
+    marcando os meses (PDF e PNG)."""
     dados = nowcast.semanal
     if dados.empty:
         return None
     x = np.arange(len(dados))
     fig, ax = plt.subplots(figsize=(10, 3.4), dpi=150)
-    ax.bar(x, dados["focos"], color=AZUL_REFERENCIA, width=0.7, label="Último ano", zorder=3)
+    topo = np.nanmax([dados["focos"].max(), dados["maximo"].max(), 1]) * 1.18
+    for n, (a, b, mes) in enumerate(faixas_dos_meses(dados)):
+        ax.axvspan(a, b, color=CORES_FAIXA[n % 2], zorder=0)
+        ax.axvline(a, color="#90A4AE", linewidth=0.8, linestyle="--", zorder=1)
+        if b - a >= LARGURA_MIN_ROTULO:        # faixa de poucos dias na ponta: sem o nome
+            ax.text((a + b) / 2, topo * 0.97, mes, ha="center", va="top", fontsize=8, color="#455A64",
+                    fontweight="bold")
+    ax.set_xlim(-0.5, len(dados) - 0.5)
+    ax.set_ylim(0, topo)
+    ax.bar(x, dados["focos"], color=AZUL_REFERENCIA, width=0.7, label=str(nowcast.ultimo_dia.year), zorder=3)
     for coluna, cor, rotulo in (("maximo", VERMELHO_MAXIMO, "Máximo da mesma semana"),
                                 ("media", LARANJA_MEDIA, "Média da mesma semana")):
         ax.plot(x, dados[coluna], color=cor, marker="o", markersize=2.5, linewidth=1.5, label=rotulo, zorder=4)
-    ax.set_xticks(x[::2])
-    ax.set_xticklabels([d.strftime("%d/%m/%y") for d in dados["fim"]][::2], rotation=45, ha="right", fontsize=7)
-    ax.set_xlabel("Semana terminada em", fontsize=8)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{i:%d/%m}–{f:%d/%m}" for i, f in zip(dados["inicio"], dados["fim"])], rotation=45,
+                       ha="right", fontsize=7)
+    ax.set_xlabel("Semana (7 dias até o último dia com dados)", fontsize=8)
     ax.tick_params(axis="y", labelsize=8)
     ax.yaxis.set_major_formatter(FuncFormatter(fmt_milhar_eixo))
     ax.set_ylabel("Focos na semana", fontsize=8)
     ax.grid(axis="y", linestyle=":", alpha=0.5, zorder=0)
     periodo = (f" — anos anteriores: {nowcast.anos_comparados[0]}–{nowcast.anos_comparados[-1]}"
                if nowcast.anos_comparados else "")
-    ax.set_title(f"Focos por semana nas últimas {len(dados)} semanas — {nowcast.municipio.title()}{periodo}",
+    ax.set_title(f"Focos por semana no último trimestre ({len(dados)} semanas) — {nowcast.municipio.title()}{periodo}",
                  fontsize=10, fontweight="bold")
-    ax.legend(fontsize=7.5, frameon=False, ncol=3, loc="upper left")
+    ax.legend(fontsize=7.5, frameon=False, ncol=3, loc="upper left", bbox_to_anchor=(0, 0.9))
     fig.tight_layout()
     return fig
+
+
+def interativo_nowcast_semanal(nowcast) -> alt.LayerChart:
+    """Focos por semana no último trimestre (interativo, Panorama) com as faixas dos meses."""
+    dados = nowcast.semanal.reset_index(drop=True)
+    dados = dados.assign(x=dados.index, x0=dados.index - 0.35, x1=dados.index + 0.35,
+                         semana=[f"{i:%d/%m}–{f:%d/%m}" for i, f in zip(dados["inicio"], dados["fim"])])
+    dados = dados.drop(columns=["inicio", "fim"])
+    faixas = pd.DataFrame([{"a": a, "b": b, "mes": mes, "par": n % 2}
+                           for n, (a, b, mes) in enumerate(faixas_dos_meses(nowcast.semanal))])
+    escala_x = alt.Scale(domain=[-0.5, len(dados) - 0.5], nice=False)
+    eixo = alt.Axis(values=list(range(len(dados))), labelExpr=f"{dados['semana'].tolist()}[datum.value]",
+                    labelAngle=-45, title="Semana (7 dias até o último dia com dados)")
+    rotulo_ano = str(nowcast.ultimo_dia.year)
+    fundo = alt.Chart(faixas).mark_rect(opacity=0.55).encode(
+        x=alt.X("a:Q", scale=escala_x, axis=eixo), x2="b:Q",
+        color=alt.Color("par:N", scale=alt.Scale(domain=[0, 1], range=list(CORES_FAIXA)), legend=None),
+        tooltip=[alt.Tooltip("mes:N", title="Mês")])
+    largas = faixas[faixas["b"] - faixas["a"] >= LARGURA_MIN_ROTULO]
+    nomes = alt.Chart(largas.assign(meio=(largas["a"] + largas["b"]) / 2)).mark_text(
+        dy=-6, fontWeight="bold", color="#455A64", baseline="bottom").encode(
+        x=alt.X("meio:Q", scale=escala_x), y=alt.value(14), text="mes:N")
+    barras = alt.Chart(dados).mark_bar(color=AZUL_REFERENCIA, opacity=0.9).encode(   # largura na escala das faixas
+        x=alt.X("x0:Q", scale=escala_x), x2="x1:Q", y=alt.Y("focos:Q", title="Nº de focos", axis=alt.Axis(format="d")),
+        y2=alt.datum(0),
+        tooltip=[alt.Tooltip("semana:N", title="Semana"), alt.Tooltip("focos:Q", title=rotulo_ano, format=".0f")])
+    longo = dados.melt(id_vars=["x", "semana"], value_vars=["maximo", "media"], var_name="serie",
+                       value_name="valor")
+    longo["serie"] = longo["serie"].map({"maximo": "Máximo da mesma semana", "media": "Média da mesma semana"})
+    periodo = (f"{nowcast.anos_comparados[0]}–{nowcast.anos_comparados[-1]}" if nowcast.anos_comparados else "")
+    legenda = alt.selection_point(fields=["serie"], bind="legend")
+    linhas = alt.Chart(longo).mark_line(point=True).encode(
+        x=alt.X("x:Q", scale=escala_x), y="valor:Q",
+        color=alt.Color("serie:N", title=f"Anos anteriores ({periodo})",
+                        scale=alt.Scale(domain=["Máximo da mesma semana", "Média da mesma semana"],
+                                        range=[VERMELHO_MAXIMO, LARANJA_MEDIA]),
+                        legend=alt.Legend(orient="bottom", direction="horizontal")),
+        opacity=alt.condition(legenda, alt.value(1), alt.value(0.12)),
+        tooltip=[alt.Tooltip("semana:N", title="Semana"), alt.Tooltip("serie:N", title="Série"),
+                 alt.Tooltip("valor:Q", title="Focos", format=".1f")],
+    ).add_params(legenda)
+    return (fundo + nomes + barras + linhas).resolve_scale(color="independent").properties(   # faixas ≠ linhas
+        title=f"Focos por semana no último trimestre — {nowcast.municipio.title()} (barras = {rotulo_ano})", height=380)
 
 
 def interativo_nowcast(nowcast) -> alt.LayerChart:

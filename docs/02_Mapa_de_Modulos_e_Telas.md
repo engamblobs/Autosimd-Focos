@@ -12,14 +12,21 @@ O programa abre direto com a base local. A busca de focos novos no INPE roda em 
    ├── 🛰️ Cenário atual — últimas 24 h e última semana (docs/07 §11; independe do período)
    │   ├── 6 indicadores: últimas 24 h e semana (com a média), municípios com focos, focos em UCs/TIs,
    │   │   no ano até o dia, últimos 30 dias
-   │   ├── Mapa dos focos da semana sobre satélite · gráfico interativo dos últimos 30 dias
+   │   ├── 🗺️ Mapa interativo (docs/10 §3): focos da semana, quadrícula de recorrência do mês, limites
+   │   │   municipais — clique num município = abre o diagnóstico dele · gráfico interativo de focos por semana no
+   │   │   último trimestre (13 semanas, faixas dos meses)
    │   ├── Abas: Municípios · UCs e TIs · Focos do dia da passagem
    │   ├── 📄 Gerar relatório do cenário (PDF) → ⬇️ Baixar (docs/10 §8; estatísticas do período no fim)
    │   └── 🗺️ Focos em GeoJSON: data inicial e final → Preparar → ⬇️ Baixar (P29)
    ├── 6 indicadores: focos no ano final até a data dos dados (× ano anterior), mesmo período do ano anterior,
    │   média do mesmo período, últimos 7 e 30 dias, municípios com focos
    ├── Mapa de kernel do ano final (estado ou região) · focos por ano (interativo) · sazonalidade
-   ├── Focos por região (estado inteiro) · 15 municípios com mais focos
+   │   ├── 📝 Cenário atual: texto automático (passagem, semana, ano, municípios acima da máxima, UCs/TIs)
+   │   ├── 🔺 Municípios acima da máxima histórica no mês (tabela + sazonalidade do escolhido)
+   │   ├── 🌡️ Anomalias do mês (abas Quantidade · Localização · Combinada; grade de 10 km)
+   │   └── 📄 Gerar relatório e pacote do cenário → ⬇️ PDF · 📦 pacote completo (.zip)
+   ├── Focos por região (estado inteiro) · 15 municípios com mais focos (expansor com todos) — células acima da máxima histórica
+   │   das mesmas datas em vermelho (ano até a data, último mês, última semana; docs/07 §10)
    └── 📊 Estatísticas no modelo INPE (as mesmas do diagnóstico)
 🔥 Diagnóstico
    Barra lateral
@@ -29,15 +36,19 @@ O programa abre direto com a base local. A busca de focos novos no INPE roda em 
    ├── Intervalo de anos (padrão: todos os anos da base)
    ├── "Baixar automaticamente o pacote completo" (padrão: ligado)
    └── 🚀 Processar Diagnóstico Completo
+   Antes de processar: 🗺️ mapa interativo do estado escolhido (padrão Pará) — clique num município = diagnóstico
    Município
    ├── Resumo executivo: 6 indicadores (docs/07 §2), cada um com explicação (help)
+   ├── 🧭 Localização: Brasil com o estado destacado e o estado com o território apontado (docs/10 §3)
    ├── 🛰️ Cenário atual (nowcast diário, docs/07 §9) — seção que se atualiza sozinha
    │   ├── 5 indicadores (último dia, dia anterior, 7 dias, 30 dias, no ano) com a diferença para a média
    │   ├── Gráfico interativo dos últimos 30 dias × máximo e média do mesmo dia e média ±3 dias
-   │   └── Mapa sobre satélite (Sentinel-2 cloudless) e lista dos focos dos últimos 1/3/7/15/30 dias, cor pela idade
+   │   └── Mapa sobre satélite e lista dos focos dos últimos 1/3/7/15/30 dias (o mapa interativo fica só na
+   │       abertura da página Diagnóstico)
    ├── Gráficos: top 5 do estado (acumulado), evolução anual com tendência, sazonalidade (média, p10–p90, ano)
    ├── Tabelas: "Top 5 <ano> - Estado" · comparativo na Região de Integração (PA) ou Geográfica Imediata
    ├── Mapas: 1 kernel do ano final (+ tabela de UCs/TIs no município), 2 kernel acumulado, 3 recorrência, 4 trimestral
+   ├── 🌡️ Anomalias (mapas 5–7 em abas, as mesmas do PDF)
    ├── Rankings de UCs e TIs no estado e no Brasil (4 abas)
    ├── 📊 Estatísticas de focos ativos no município (modelo INPE, docs/07 §8) — seção que se atualiza sozinha
    │   ├── Controles: ano de referência, mês do dia a dia, faixa de percentis, janela do mais/menos intenso,

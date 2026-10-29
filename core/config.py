@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 APP_NOME = "AutoSIMD-FOCOS"
-APP_VERSAO = "0.12"
+APP_VERSAO = "0.13"
 APP_VERSAO_DATA = "29/10/2026"
 REPOSITORIO = "https://github.com/engamblobs/Autosimd-Focos"
 
@@ -33,6 +33,7 @@ REFERENCIA_DIR = RAIZ / "referencia"
 MUNICIPIOS_PA_CSV = REFERENCIA_DIR / "municipios_pa.csv"   # mesma tabela do AutoSIMD-DESASTRE
 MUNICIPIOS_BR_CSV = REFERENCIA_DIR / "municipios_br.csv"   # Regiões Imediatas do IBGE (ferramentas/gerar_municipios_br.py)
 LOGOS_DIR = REFERENCIA_DIR / "logos"
+LIMITES_UF_GEOJSON = REFERENCIA_DIR / "limites_uf.geojson"   # mapa de localização (ferramentas/gerar_limites_uf.py)
 LOGO_APP = LOGOS_DIR / "AUTOSIMD-FOCOS.png"
 LOGO_CBM_CEDEC = LOGOS_DIR / "CBM-CEDEC.png"
 ICONE_APP = LOGOS_DIR / "AutoSIMD-FOCOS.ico"

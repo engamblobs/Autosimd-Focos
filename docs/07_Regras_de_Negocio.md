@@ -51,6 +51,8 @@ Município sem focos no ano final: posição "Sem focos".
 | 3. Recorrência | Grade ajustada com os anos de reincidência (escala plasma) e a observação da grade |
 | 4. Trimestral | 4 painéis de kernel + cruzes; não é gerado sem focos |
 | Cenário atual | Focos dos últimos N dias sobre imagem de satélite (Sentinel-2 cloudless, EOX), em Web Mercator; cor pela idade (§9) |
+| Cenário atual — tela | Mapa interativo (zoom, arrastar, dica ao passar o mouse): focos dos últimos N dias (padrão 7), quadrícula da recorrência do mês do último dia (§11, grade proporcional, só células com foco no mês em algum ano comparado) semitransparente, limites municipais do estado (do território analisado; na UC/TI, o estado com mais focos da área) e contorno do território. Clique num município com focos na base = abre o diagnóstico dele (sem baixar o pacote automaticamente) |
+| Localização | Brasil (estados, o do território em laranja, retângulo vermelho no território) e o estado com os limites municipais, o território em vermelho e uma seta com o nome |
 
 Todos os mapas em graus com a proporção real da latitude (1/cos φ); o do cenário atual em Web Mercator, com os eixos em graus.
 
@@ -77,7 +79,7 @@ Implementação: `core/estatisticas.py` (`estatisticas_territorio`). Modelo: htt
 | Cobertura | Da 1ª à última data da base, dentro do período (hoje 04/07/2002 até o último dia buscado). Mês, semana ou dia fora da cobertura = vazio ("-"), nunca zero |
 | Ano de referência | Padrão = ano final; ajustável na tela. É o ano das barras e das linhas destacadas |
 | Mínimo, média, máximo | Por coluna, com todos os anos do **período da análise** (P15) **menos o de referência**, ignorando vazios |
-| Destaque da tabela mês a mês | Menor valor de cada coluna em amarelo e maior em vermelho, entre os mesmos anos do mínimo/máximo (o ano de referência não é destacado); empate = todos destacados. **Zero nunca é destacado**: o amarelo vai para o menor valor diferente de 0, e a coluna só com zeros fica sem destaque (vale também para o dia a dia) |
+| Destaque da tabela mês a mês | Menor valor de cada coluna em amarelo e maior em vermelho, entre os mesmos anos do mínimo/máximo; **o ano de referência fica com o vermelho quando passa da máxima da série ou empata com ela, mesmo com o mês em andamento** (e nunca com o amarelo, porque um mês incompleto seria quase sempre o menor); empate = todos destacados. **Zero nunca é destacado**: o amarelo vai para o menor valor diferente de 0, e a coluna só com zeros fica sem destaque (vale também para o dia a dia) |
 | Dia a dia | Um mês (padrão: o último com dados no ano de referência), ano de referência e o anterior, dias 1–31 e total |
 | Comparativos (P12) | **Mensal**; **semanal** (blocos de 7 dias a partir de 1º de janeiro, 53 semanas, a última curta); **1º semestre** (01/01 a 30/06) e **2º semestre** (01/07 a 31/12) **em semanas**: blocos de 7 dias a partir do 1º dia do semestre, a última mais curta como a 53ª do semanal — 26 no 1º (a 26ª com 6 dias, 7 nos bissextos) e 27 no 2º (a 27ª = 30–31/12) (pedido de 28/10/2026; antes, cada dia) |
 | Sazonalidade mensal | Média de cada mês nos mesmos anos do mínimo/máximo, faixa p10–p90 (os percentis escolhidos) e a linha do ano de referência |
@@ -93,7 +95,7 @@ Implementação: `core/estatisticas.py` (`estatisticas_territorio`). Modelo: htt
 | Focos | Todos os focos do município, UC ou TI (P23) na base (independe do período da barra lateral), pelo cruzamento com o polígono (§1), até o último dia da base |
 | Último dia | O de `atualizacao_inpe.json`; se for provisório, a tela avisa que ainda é parcial |
 | Comparação | Cada um dos últimos 30 dias × o mesmo dia do calendário nos anos anteriores que a base cobre desde 1º de janeiro (2003 em diante): média e máximo; e a média da **janela de 7 dias** (o dia ±3) nesses anos (P20). 29/02 sem par é ignorado |
-| Semanal | Últimas 52 semanas (blocos de 7 dias até o último dia) × média e máximo da mesma semana nos anos anteriores (no PDF, no Excel e no pacote) |
+| Semanal | Últimas 13 semanas = último trimestre (blocos de 7 dias até o último dia), com faixas marcando os meses × média e máximo da mesma semana nos anos anteriores (no PDF, no Excel e no pacote) |
 | Relatório | PDF, Excel e CSV/PNG do pacote: indicadores, gráfico dos 30 dias e mapa dos últimos 7 dias (P18) |
 | Indicadores | Focos no último dia, no dia anterior, nos últimos 7 e 30 dias (com a diferença para a soma das médias dos mesmos dias) e no ano até o mesmo dia/mês (% em relação à média desses anos e posição entre eles, empate = mesma posição) |
 | Idade no mapa | Último dia; 1–2 dias antes; 3–6; 7–29 |
@@ -107,6 +109,8 @@ Implementação: `core/estatisticas.py` (`estatisticas_territorio`). Modelo: htt
 | Ano final "até a data" | Focos de 1º de janeiro até o dia/mês da data dos dados; comparado com o mesmo período do ano anterior e com a média do mesmo período dos anos anteriores do período (só anos cobertos desde 1º de janeiro) |
 | Últimos 7 / 30 dias | Até a data dos dados |
 | Regiões e municípios | Ranking do ano final com o desempate do §3 |
+| Municípios acima da máxima no mês | Os que, do dia 1º do mês até o dia da passagem, têm mais focos do que em qualquer ano anterior nas mesmas datas (todos os municípios do estado/região, não só os 15 primeiros); ordem = focos no mês. Texto do cenário (`cenario.texto_do_cenario`) cita os 8 primeiros; o PDF e o pacote trazem a sazonalidade de todos (período do filtro até o ano da passagem) |
+| Acima da máxima histórica | Célula destacada (vermelho) quando o valor do ano final passa do maior valor **das mesmas datas** nos anos anteriores que a base cobre desde 1º de janeiro (2003–ano anterior, a base inteira, não só o filtro): `Focos (ano)` × 1º/jan até o dia; `Último mês` × dia 1º até o dia; `Última semana` × os 7 dias até o dia. O `Acumulado` não é destacado: por ser a soma de todos os anos, não tem máxima histórica com que comparar (P34) |
 | Estatísticas | As do §8, com os focos do estado/região |
 
 ## 11. Cenário atual do estado — últimas 24 h e última semana (`core/cenario.py`)
@@ -120,6 +124,25 @@ Implementação: `core/estatisticas.py` (`estatisticas_territorio`). Modelo: htt
 | Parcial | Dia da passagem ainda provisório (`atualizacao_inpe.json`): indicador marcado "(parcial)" |
 | Municípios | Focos nas 24 h e na semana; ordem: 24 h, depois semana |
 | UCs e TIs | Pelo cruzamento do foco (§1); ordem: semana, depois 24 h |
-| Semanas (último ano) | 52 blocos de 7 dias corridos terminando no dia da passagem; cada um × a mesma semana (mesmas datas) nos anos anteriores cobertos desde 1º de janeiro: média e máximo |
+| Semanas (último trimestre) | 13 blocos de 7 dias corridos terminando no dia da passagem; cada um × a mesma semana (mesmas datas) nos anos anteriores cobertos desde 1º de janeiro: média e máximo |
 | Recorrência do mês | Grade proporcional (§4) sobre o limite do estado/região; por célula, nº de anos (os comparados do nowcast) com pelo menos um foco no mês da passagem; cada foco da semana recebe o valor da célula onde caiu. "Frequente" = foco no mês em pelo menos metade desses anos |
 | Base regravada | O nowcast regrava a base em segundo plano; a página só recarrega sozinha no ciclo do painel da barra lateral, nunca no meio de um clique |
+
+## 12. Anomalias de focos de calor (`core/anomalias.py`, P32)
+
+| Regra | Definição |
+|---|---|
+| Grade | A proporcional do mapa de recorrência (§4) |
+| Período | Meses do calendário que terminam no mês do último dia com dados, até esse dia: mês, bimestre (2), trimestre (3), semestre (6), ano (12). No PDF: **mês** (`PERIODO_RELATORIO`) |
+| Referência | As mesmas datas em cada ano anterior completo: diagnóstico = anos do período da análise (os das estatísticas, sem o ano final); cenário = os do nowcast (2003–ano anterior). Mínimo de 3 anos |
+| Unidade comum | Células de mesma área e períodos com os mesmos dias → contagem ∝ densidade. Contagens na transformação de Freeman–Tukey T(n) = √n + √(n+1) (variância ≈ 1); as três anomalias em desvios padrão |
+| Quantidade | (T(x) − média T(h)) / max(dp T(h), 1) — anomalia padronizada da célula (Wilks, 2011) |
+| Localização | Desvio de Freeman–Tukey T(x) − √(4E + 1), E = total atual × participação histórica da célula (Bishop, Fienberg & Holland, 1975; Kulldorff et al., 2005), padronizado pelos mesmos resíduos de cada ano de referência (cada ano contra os demais). Independe do total |
+| Combinada | (z_Q + z_L) / √(2 + 2ρ) — Stouffer (1949) com a correção de Strube (1985); ρ = correlação nas células com informação |
+| Sinal | **anomalia = −z**: negativa (vermelha) = **mais** focos que o comum; positiva (azul) = **menos**. É o contrário da convenção da climatologia (positiva = acima do normal): ajustado por se tratar de focos de calor — mostrar o aumento de fogo em azul, cor associada a algo positivo, poderia levar o leitor a uma interpretação equivocada (P36; a justificativa está no texto de metodologia dos PDFs). `SINAL_ANOMALIA` |
+| Classes | \|a\| < 1 comum; 1–2 moderada; 2–3 forte; ≥ 3 extrema |
+| Significância | Quantidade e localização: t de Student com n − 1 graus de liberdade e o fator de predição √(1 + 1/n); combinada: normal. Valores-q de Benjamini & Hochberg (1995) nas células com informação (Wilks, 2016). Pontos: pequeno = q < 5%, grande = q < 1% |
+| Grade no cenário | Estado/região: fixa de **10 km** (`TAMANHO_GRADE_ANOMALIA_ESTADO`); diagnóstico: a proporcional |
+| Grupos | Células significativas a **1%** do mesmo sinal a até **20 km** umas das outras (fechamento morfológico em km: expande 10 km, une, encolhe 5 km) formam um grupo de ≥ 2 células, contornado em vermelho (mais focos) ou azul (menos focos), linha de 1,1 (o limite do território é 1,5) com halo branco (`grupos_significativos`) |
+| Células vazias | Sem foco no período nem no histórico |
+| Limitação | Com poucos focos no período (ex.: Maracanã, 3 focos em out/2026) quase nenhuma célula é significativa; células com **menos** focos raramente são, porque a contagem não fica abaixo de zero |

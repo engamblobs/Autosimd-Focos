@@ -14,6 +14,7 @@ Você atua como desenvolvedor(a) sênior do **AutoSIMD-FOCOS**: o usuário escol
 | Bases de dados, atualização pelo INPE, colunas UC/TI | `docs/03_Fontes_de_Dados_e_Importacao.md` (§5 = atualização), `docs/06_Dicionario_de_Dados.md` |
 | Nowcast (cenário atual) | `docs/07_Regras_de_Negocio.md` §9, `docs/10_Produtos.md` §6 |
 | Cenário atual do estado (24 h / semana, PDF do cenário) | `docs/07_Regras_de_Negocio.md` §11, `docs/10_Produtos.md` §8 |
+| Anomalias de focos (quantidade, localização, combinada, significância) | `docs/07_Regras_de_Negocio.md` §12, `docs/10_Produtos.md` §3 |
 | Rankings, regiões, mapas de kernel, grade | `docs/07_Regras_de_Negocio.md` §3–§5 |
 | Colunas, campos, estruturas em memória | `docs/05_Estrutura_de_Dados.md`, `docs/06_Dicionario_de_Dados.md` |
 | Indicadores, rankings, grade, áreas protegidas, Regiões de Integração | `docs/07_Regras_de_Negocio.md` |
