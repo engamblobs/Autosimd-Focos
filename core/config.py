@@ -5,8 +5,8 @@ import os
 from pathlib import Path
 
 APP_NOME = "AutoSIMD-FOCOS"
-APP_VERSAO = "0.13"
-APP_VERSAO_DATA = "29/10/2026"
+APP_VERSAO = "0.14"
+APP_VERSAO_DATA = "23/11/2026"
 REPOSITORIO = "https://github.com/engamblobs/Autosimd-Focos"
 
 # Faixa de portas própria (8501 é o padrão do Streamlit; o AutoSIMD-DESASTRE usa 8571–8620)

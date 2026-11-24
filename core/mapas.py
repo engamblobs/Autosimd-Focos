@@ -443,13 +443,21 @@ def mapa_anomalia(an, tipo: str, poligono, nome: str, compacto: bool = False):
     cx, cy = np.meshgrid((an.grade.x[:-1] + an.grade.x[1:]) / 2, (an.grade.y[:-1] + an.grade.y[1:]) / 2,
                          indexing="ij")
     n5, n1 = NIVEIS_SIGNIFICANCIA
-    so_5 = an.significativas(tipo, n5) & ~an.significativas(tipo, n1)
-    so_1 = an.significativas(tipo, n1)
+    grupos = grupos_significativos(an, tipo)              # contorno dos grupos a 1% (até 20 km entre células)
+    # células já dentro de um grupo contornado não recebem ponto (o contorno já marca a significância)
+    dentro = np.zeros(cx.shape, dtype=bool)
+    if grupos:
+        import shapely
+
+        uniao = shapely.union_all([g["poligono"] for g in grupos])
+        dentro = shapely.contains_xy(uniao, cx, cy)
+    so_5 = an.significativas(tipo, n5) & ~an.significativas(tipo, n1) & ~dentro
+    so_1 = an.significativas(tipo, n1) & ~dentro
     # pontos com a cor da própria célula (não escondem a anomalia) e borda verde: clara a 5%, escura a 1%
     for selecao, tamanho, borda, espessura in ((so_5, 16, VERDE_5, 0.9), (so_1, 30, VERDE_1, 1.6)):
         ax.scatter(cx[selecao], cy[selecao], s=tamanho, c=cmap(norm(valores[selecao])), edgecolors=borda,
                    linewidths=espessura, zorder=5)
-    for grupo in grupos_significativos(an, tipo):        # contorno dos grupos a 1% (até 20 km entre células)
+    for grupo in grupos:
         for parte in poligonos_de(grupo["poligono"]):
             gx, gy = parte.exterior.xy
             ax.plot(gx, gy, color=COR_GRUPO_MAIS if grupo["mais_focos"] else COR_GRUPO_MENOS, linewidth=1.1,

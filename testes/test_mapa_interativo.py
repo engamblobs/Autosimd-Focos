@@ -86,3 +86,15 @@ def test_mapa_de_localizacao():
         assert any(t.get_text() == "Novo Progresso" for t in figura.axes[1].texts)      # seta com o nome
     finally:
         fechar_figuras({"f": figura})
+
+
+def test_legenda_com_as_cores_do_mapa(cenario):
+    from core.mapa_interativo import OPACIDADE_GRADE, cor_sobre_satelite, legenda_html
+
+    cen, _, rec = cenario
+    assert cor_sobre_satelite((255, 255, 255), 255) == "rgb(255,255,255)"       # opaca: a própria cor
+    assert cor_sobre_satelite((255, 255, 255), 0, (10, 20, 30)) == "rgb(10,20,30)"   # transparente: o fundo
+    html = legenda_html(cen.nowcast.recentes(7), rec)
+    assert "Focos de calor" in html and "Quadrícula" in html and "Limites municipais" in html
+    assert "clique" not in html
+    assert OPACIDADE_GRADE < 255

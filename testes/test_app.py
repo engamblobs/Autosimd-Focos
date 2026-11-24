@@ -237,9 +237,10 @@ def test_panorama_do_estado():
 
 def test_cenario_atual_no_panorama_e_pdf():
     at = rodar(None)
-    assert any("Cenário atual — Pará: últimas 24 h e última semana" in m.value for m in at.markdown)
-    metricas = {m.label: m.value for m in at.metric}
-    assert any(r.startswith("Últimas 24 h — passagem de 31/12/2024") for r in metricas)
+    assert any("Pará: focos nas últimas 24 horas e na última semana" in m.value for m in at.markdown)
+    # indicadores e boletim em HTML (fichas), com a fonte da base no rodapé do boletim
+    assert any('class="ficha"' in m.value and "Últimas 24 h — passagem de 31/12/2024" in m.value for m in at.markdown)
+    assert any("Boletim de 31/12/2024" in m.value and "BDQueimadas/INPE" in m.value for m in at.markdown)
     assert not at.get("download_button")
     at.button(key="cenario_gerar").click().run()
     assert not at.exception

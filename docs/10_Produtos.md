@@ -2,6 +2,8 @@
 
 Identidade visual: logos em `referencia/logos/` (`AUTOSIMD-FOCOS.png`, `CBM-CEDEC.png`, `AutoSIMD-FOCOS.ico`).
 
+**Interface (v0.14, skill frontend-design):** tema em `.streamlit/config.toml` (o bloco `[theme]` também vai para o pacote). Cores: Névoa `#EEF1EC` (fundo), Copa `#E1E7DE` (painel), Tinta `#1D2B23` (texto), Rio `#0D6E7D` (botões e links), Brasa `#B23A1E` (só fogo, recordes e alertas), Líquen `#6A786E` (legendas). Fontes Fira Sans (texto) e Fira Sans Condensed (títulos e números), licença OFL, em `static/fontes/` (servidas com `server.enableStaticServing`, funcionam offline). Páginas organizadas em abas; o destaque é o mapa no topo do Cenário atual seguido do "Boletim de DD/MM/AAAA" (faixa cor de brasa) e da ficha de indicadores.
+
 ## 1. Pacote .zip (`core/produto.py`)
 
 Mesmo conteúdo para município, UC e TI (P7), montado em memória e baixado pelo navegador (automaticamente, se a opção estiver ligada, e pelo botão). `<alvo>` = nome sem acento (`SAO_FELIX_DO_XINGU`), `<p>` = `<ano_inicio>_<ano_fim>`.

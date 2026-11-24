@@ -44,6 +44,7 @@ BASES_ORIGEM = PROJETO / "BASES_GEOJSON"
 
 # O que vai para o pacote (relativo ao projeto). Não vão: testes, amostras, docs, ferramentas.
 ARQUIVOS_APP = ["app.py"]
+TEMA = PROJETO / ".streamlit" / "config.toml"            # bloco [theme] da interface
 PASTAS_APP = ["core", "referencia"]
 IGNORAR = shutil.ignore_patterns("__pycache__", "*.pyc", ".~lock.*#", "*~")
 # Somente as bases que o programa lê (core/config.py)
@@ -225,8 +226,14 @@ def montar_app(destino, versao, data):
     for nome in PASTAS_APP:
         shutil.copytree(PROJETO / nome, destino / nome, ignore=IGNORAR)
     copiar(PASTA_EMPACOTAMENTO / "iniciar.py", destino / "iniciar.py")
-    copiar(PASTA_EMPACOTAMENTO / "config.toml", destino / ".streamlit" / "config.toml")
+    # config do pacote + o tema da interface (mesmo bloco [theme] do desenvolvimento, .streamlit/config.toml)
+    (destino / ".streamlit").mkdir(parents=True, exist_ok=True)
+    tema = TEMA.read_text(encoding="utf-8")
+    (destino / ".streamlit" / "config.toml").write_text(
+        (PASTA_EMPACOTAMENTO / "config.toml").read_text(encoding="utf-8") + "\n" + tema[tema.index("\n[theme]\n") + 1:],
+        encoding="utf-8")
     copiar(PASTA_EMPACOTAMENTO / "static" / "autosimd_focos.txt", destino / "static" / "autosimd_focos.txt")
+    shutil.copytree(PROJETO / "static" / "fontes", destino / "static" / "fontes", dirs_exist_ok=True)
     escrever_crlf(
         (PASTA_EMPACOTAMENTO / f"Iniciar_{NOME}.bat").read_text(encoding="utf-8"),
         destino / f"Iniciar_{NOME}.bat",

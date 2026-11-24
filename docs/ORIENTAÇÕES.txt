@@ -1,0 +1,100 @@
+################ HISTÓRICO — escreva as orientações novas ACIMA desta linha ################
+# O Claude lê só o que está acima desta linha. Depois de atender, ele move o que você escreveu
+# para cá (mais recente primeiro), com data-hora e o que foi feito.
+
+=== 23/11/2026 19:39 — Interface nova no programa real + v0.14 pronta para publicar
+Você pediu:
+- a estética da interface ficou boa, aplique a mesma ideia de seções superiores na seção de diagnóstico de um município tbm e atualize no projeto real com a nova interface.
+- no painel lateral eu anexei uma imagem com orientações de como gostaria que ficasse, quero que a caixa c fique na posição d e a linha da letra A delete e o conteúdo da seção de relatório do cenário pdf desloque para cima para ocupar o espaço.
+
+na legenda do mapa:
+- "Gerado com a base buscada no INPE até 23/11/2026" substitua por "Gerado automaticamente com a base buscada no BD QUEIMADAS/INPE até 23/11/2026 do satélite de referência AQUA-TARDE" corrija a ortografia tbm.
+- "2003–2025. A quadrícula é semitransparente: as cores acima já são as que aparecem sobre a imagem de satélite. Onde não há quadrícula, não houve foco nesse mês." essa observação sobre a quadricula semitransparente é desnecessária pois a escala de cor agora está fiel, deixe apenas "003–2025. Onde não há quadrícula, não houve foco nesse mês."
+- "Limites municipais — clique para abrir o diagnóstico" deixe apenas: "Limites municipais".
+
+- prepare para fazer o deploy no github com uma nova
+
+Claude fez:
+- Interface da amostra passada para o app.py (a pasta amostra/ foi apagada). Tema em .streamlit/config.toml,
+  fontes Fira em static/fontes/; o empacotador leva os dois para o pacote Windows (testado no Wine).
+- Diagnóstico de município/UC/TI também em abas: Resumo (com localização) · Cenário atual · Gráficos e
+  rankings · Mapas · Anomalias · Áreas protegidas · Estatísticas (modelo INPE) · Metodologia. O pacote
+  completo (.zip) foi para o painel esquerdo, como o relatório do Panorama.
+- Painel esquerdo: tirei a linha e o espaço vazio (a/b); o Relatório subiu. O bloco "⋯" (c) agora fica preso
+  no rodapé do painel (d).
+- Boletim: "Gerado automaticamente com a base buscada no BDQueimadas/INPE até DD/MM/AAAA, do satélite de
+  referência AQUA-Tarde (AQUA_M-T)". Ortografia: o nome oficial é "BDQueimadas" (junto); também corrigi o
+  "(dia ainda parcial))" com parênteses duplos no texto do boletim.
+- Legenda: tirada a frase da quadrícula semitransparente (fica "2003–2025. Onde não há quadrícula, não
+  houve foco nesse mês.") e "Limites municipais" sem o complemento.
+- Versão 0.14 preparada: APP_VERSAO 0.14 (23/11/2026), README e docs (02, 04, 08, 09, 10), 159 testes
+  passando, pacote dist/AutoSIMD-FOCOS_v0.14.zip (327 MB, SHA256 1a9da037…b84e) testado no Wine, texto da
+  Release em dist/notas_release_v0.14.md.
+Observação: no empacotamento encontrei e corrigi um erro meu (o config.toml do pacote saía inválido — o
+programa não abriria no Windows); agora há teste que lê o arquivo.
+Pendente: seu "pode publicar" para o commit, a tag v0.14, o push e a Release. Os arquivos docs/.obsidian/
+(configuração do seu editor) estão modificados — não vou incluir no commit, a menos que você queira.
+
+=== 23/11/2026 18:37 — Amostra refeita com as skills novas
+Você pediu:
+adicionei as skills, verifique e refaça a interface de testes usando ela
+
+Claude fez:
+- Skill usada: frontend-design (direção visual). Também chegaram superdesign e build-dashboard: a
+  superdesign manda o projeto para um serviço externo (superdesign.dev, com login) — não usei sem sua
+  autorização; a build-dashboard gera HTML avulso, fora do Streamlit.
+- A amostra agora fica na pasta amostra/ (app_amostra.py + tema próprio em amostra/.streamlit/config.toml
+  + fontes em amostra/static/fontes). O programa de verdade continua igual. Para ver:
+      cd amostra && python -m streamlit run app_amostra.py
+- Plano de design (seguindo a skill):
+  · Assunto: sala de situação de focos de calor da Defesa Civil do Pará; público: técnicos da SIMD/CEDEC;
+    tarefa principal: ver como está o fogo agora e gerar o boletim.
+  · Cores: Névoa #EEF1EC (fundo), Copa #E1E7DE (painel), Tinta #1D2B23 (texto), Rio #0D6E7D (botões e
+    links, puxa o ciano do contorno do mapa), Brasa #B23A1E (só fogo, recordes e alertas), Líquen #6A786E.
+  · Fontes: Fira Sans (texto) e Fira Sans Condensed (títulos e números) — licença livre (OFL), vão junto
+    no pacote porque o programa roda offline.
+  · Destaque único: o mapa abre a aba "Cenário atual" e logo abaixo vem o "Boletim de DD/MM/AAAA" (texto
+    do cenário com uma faixa cor de brasa), ao lado de uma ficha com os 6 números (sem cortar os valores).
+  · Abas sem emojis e com nomes do que contêm: Cenário atual · Municípios acima da máxima · Anomalias do
+    mês · Ano de 2026 · Estatísticas (modelo INPE).
+- Mantidos da amostra anterior: legenda nova ao lado do mapa, relatório/GeoJSON no painel esquerdo,
+  bloco "⋯" da base INPE + sobre (abre na atualização e recolhe 5 s depois).
+Pendente: sua aprovação. Aprovando, passo tudo para o app.py, o tema vai para o pacote e apago a amostra.
+
+=== 23/11/2026 18:25 — Amostra da interface nova + significância nos grupos
+Você pediu:
+- use as skills de ux-ui e de frontend para melhorar a visualização e organização das imagens no site, faça uma página de amostra primeiro com a nova interface e me mostre antes de mexer na antiga.
+- A legenda do mapa em streamlit está muito confusa pois os poligonos no papa estão em multiplicar e não aparecem na mesma cor das legendas, verifique uma forma de melhorar a vizualização ou a descrição da legenda, adicine na legenda também a descrição das cores dos pontos.
+a seção de relatório do cenário pdf e focos de calor em geojson devem ficar no final da página e na parte inferior do painel essquerdo, acima de sobre o sistema & desenvolvedor.
+- nos mapas de anomalias, remova os circulos verdes de significância que estiverem dentro de um grupo de significância.
+- o espaço de descrição da base de focos inpe no painel esquerdo estã muito grande, deixe ela na parte inferior do painel esquerdo e junto com a parte de sobre o siste & desenvolvedor em um botão de "...", essa seção da base de focos inpe deve que inclui até o botão de nowcast deve aparecer no painel esquerdo quando a base estiver sendo atualizada, quando a base terminar de atualizar deve aguardar 5 segundos e recolher automaticamente.
+
+Claude fez:
+1. Amostra da interface nova em amostra_interface.py (cópia do app.py; o programa de verdade NÃO foi
+   mexido). Para ver: python -m streamlit run amostra_interface.py
+   - Panorama em abas: Cenário atual · Acima da máxima · Anomalias · Ano · Estatísticas (antes era tudo
+     empilhado numa página só).
+   - Não havia skill de "frontend"/"ux-ui" instalada; usei a skill de crítica de design (design-critique)
+     para orientar as mudanças.
+2. Legenda do mapa: agora fica num quadro ao lado do mapa, com 3 grupos — Focos (pontos com contorno
+   preto, cor pela idade), Quadrícula (degradê de 1 a N anos já com a cor que aparece sobre o satélite) e
+   Linhas (ciano = território; branca fina = limites municipais, clicáveis).
+   Obs.: a quadrícula não está em "multiplicar" — o Streamlit não permite; ela é semitransparente. A
+   legenda antiga mostrava a cor pura e por isso não batia com o mapa; a nova mistura a cor com o verde da
+   floresta para ficar igual ao que se vê.
+3. Relatório do cenário (PDF + pacote) e Focos em GeoJSON: foram para a parte de baixo do painel esquerdo,
+   acima do bloco "⋯". Entendi "final da página" como esse final do painel; se quiser também um bloco no
+   fim da página principal, me avise.
+4. Mapas de anomalia: as células dentro de um grupo contornado não têm mais o círculo verde (o contorno já
+   indica a significância). FEITO direto no programa (core/mapas.py), vale para tela, PDF e pacote.
+5. Base de focos INPE + Sobre: juntos num bloco "⋯ Base de focos (INPE) e sobre o sistema", no fim do painel
+   esquerdo. Abre sozinho quando a base começa a atualizar ("⏳ Atualizando…"), mostra "✅ Base de focos
+   atualizada" e recolhe 5 s depois. Testado: abriu, mostrou o aviso e recolheu.
+Pendente: sua aprovação da amostra. Aprovando, passo os itens 1, 2, 3 e 5 para o app.py e apago a amostra.
+Testes: 158 passando (novo teste da legenda).
+
+=== 23/11/2026 18:14 — Combinado o uso deste arquivo
+Você: a partir de agora as orientações vêm por este arquivo; ao terminar, registrar data-hora e
+observações aqui embaixo, deixando o topo livre.
+Claude: criada esta linha divisória. As 5 orientações acima ficaram no topo, ainda não feitas,
+aguardando você pedir para executar.

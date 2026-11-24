@@ -8,8 +8,9 @@ barra lateral → processar → ver indicadores, gráficos, mapas e tabelas → 
 """
 
 import base64
+from html import escape
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import altair as alt
@@ -57,7 +58,7 @@ from core.territorios import (
     geometria_area_protegida, geometria_municipio, municipios_simplificados,
 )
 from core.texto import chave_nome, fmt_densidade, fmt_inteiro, fmt_numero, fmt_percentual, fmt_posicao, nome_arquivo
-from core.mapa_interativo import ALTURA_PX, deck_focos_recentes, legenda, municipio_clicado
+from core.mapa_interativo import ALTURA_PX, deck_focos_recentes, legenda_html, municipio_clicado
 
 st.set_page_config(
     page_title=f"{config.APP_NOME} v{config.APP_VERSAO}",
@@ -76,13 +77,38 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-    .main-header { text-align: center; font-family: Arial, sans-serif; line-height: 1.4; margin-bottom: 25px; }
+    .main-header { text-align: center; line-height: 1.3; margin-bottom: 12px; color: #1D2B23; }
     .main-header h2 { font-size: 22px; margin: 0; font-weight: bold; }
     .main-header h3 { font-size: 17px; margin: 2px 0; font-weight: normal; }
     /* linhas próximas até o nome do projeto: o Streamlit põe espaçamento próprio nos títulos */
     .main-header h2, .main-header h3 { padding: 0 !important; margin: 0 !important; line-height: 1.25 !important; }
-    .main-header .sub { font-size: 18px; margin-top: 6px; color: #E53935; font-weight: bold; }
-    .main-header .ref { font-size: 24px; margin-top: 4px; color: #1E88E5; font-weight: bold; }
+    .main-header h2, .main-header h3 { font-family: "Fira Sans Condensed", "Fira Sans", sans-serif !important; }
+    .main-header h3 { color: #4A5A50 !important; font-weight: 500 !important; }
+    .main-header .sub { font-size: 15px; margin-top: 6px; color: #B23A1E; font-weight: 600; letter-spacing: .02em; }
+    .main-header .ref { font-family: "Fira Sans Condensed", sans-serif; font-size: 26px; margin-top: 2px;
+                        color: #0D6E7D; font-weight: 700; }
+    /* boletim do cenário: o elemento de destaque da página */
+    .boletim { border-left: 5px solid #B23A1E; background: #F7F8F5; padding: 14px 18px 6px 18px;
+               border-radius: 0 6px 6px 0; max-width: 78ch; }
+    .boletim h4 { font-family: "Fira Sans Condensed", sans-serif; font-weight: 700; font-size: 1.35rem;
+                  margin: 0 0 6px 0; color: #1D2B23; padding: 0; }
+    .boletim .quando { color: #6A786E; font-size: .9rem; margin-bottom: 8px; }
+    .boletim p { font-size: 1.02rem; line-height: 1.55; margin: 0 0 10px 0; }
+    .fichas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; }
+    .ficha { border-top: 2px solid #C9D2C6; padding-top: 6px; }
+    .ficha .rotulo { color: #4A5A50; font-size: .85rem; line-height: 1.25; }
+    .ficha .numero { font-family: "Fira Sans Condensed", sans-serif; font-weight: 600; font-size: 1.9rem;
+                     line-height: 1.15; color: #1D2B23; }
+    .ficha .nota { color: #6A786E; font-size: .8rem; }
+    [data-testid="stMetricLabel"] p { color: #4A5A50; font-size: .85rem; white-space: normal; }
+    /* painel esquerdo: o bloco "⋯" (base INPE + sobre) fica preso no rodapé */
+    [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {
+        min-height: calc(100vh - 10rem); }          /* desconta o rodapé fixo da página */
+    [data-testid="stSidebarUserContent"] [data-testid="stVerticalBlock"] > div:has(.st-key-rodape_lateral) {
+        margin-top: auto; }
+    [data-testid="stMetricLabel"] div, [data-testid="stMetricValue"] div { white-space: normal !important;
+        overflow: visible !important; text-overflow: clip !important; }
+    [data-testid="stMetricValue"] { font-family: "Fira Sans Condensed", sans-serif; }
     .footer-container {
         position: fixed; left: 0; bottom: 0; width: 100%;
         background-color: var(--background-color, #FFFFFF);
@@ -227,7 +253,10 @@ def _ao_mudar_nowcast():
     obter_atualizador(str(config.BASES_DIR)).definir_nowcast(st.session_state["toggle_nowcast"])
 
 
-@st.fragment(run_every=5)
+SEGUNDOS_ABERTO_DEPOIS = 5
+
+
+@st.fragment(run_every=2)
 def painel_atualizacao(recarregar_ao_mudar: bool):
     """Situação da base e da busca no INPE (barra lateral); reexecuta sozinho a cada 5 s.
 
@@ -248,6 +277,28 @@ def painel_atualizacao(recarregar_ao_mudar: bool):
             st.rerun(scope="app")
         st.toast("🛰️ Focos novos incorporados à base — valem para a próxima análise processada.")
 
+    # aberto durante a busca e por 5 s depois dela; recolhido no resto do tempo (o rótulo muda para o
+    # Streamlit tratar como outro bloco e respeitar o "expanded")
+    # os 5 s contam de quando esta tela mostra o fim da busca (o recálculo da página pode demorar mais que isso)
+    if estado["em_execucao"]:
+        st.session_state["base_aberta_ate"] = None
+    elif "base_aberta_ate" in st.session_state and st.session_state["base_aberta_ate"] is None:
+        st.session_state["base_aberta_ate"] = datetime.now() + timedelta(seconds=SEGUNDOS_ABERTO_DEPOIS)
+    ate = st.session_state.get("base_aberta_ate")
+    recem = ate is not None and datetime.now() < ate
+    if estado["em_execucao"]:
+        rotulo, aberto = "⏳ Atualizando a base de focos (INPE)…", True
+    elif recem:
+        rotulo, aberto = "✅ Base de focos atualizada", True
+    else:
+        rotulo, aberto = "⋯  Base de focos (INPE) e sobre o sistema", False
+    with st.expander(rotulo, expanded=aberto):
+        conteudo_base(atualizador, estado)
+        st.divider()
+        conteudo_sobre()
+
+
+def conteudo_base(atualizador, estado):
     st.markdown("**🛰️ Base de focos (INPE)**")
     situacao = situacao_da_base(config.BASES_DIR)
     if situacao["ultimo_dia"]:
@@ -387,9 +438,9 @@ def parametros_analise(df: pd.DataFrame) -> dict | None:
     return p
 
 
-def sobre():
-    st.sidebar.divider()
-    with st.sidebar.expander("ℹ️ Sobre o Sistema & Desenvolvedor"):
+def conteudo_sobre():
+    st.markdown("**ℹ️ Sobre o Sistema & Desenvolvedor**")
+    if True:
         st.markdown(f"**{config.APP_NOME}** `v{config.APP_VERSAO}` — {config.APP_VERSAO_DATA}")
         st.caption("Diagnóstico Territorial de Focos de Calor")
         funcoes = "\n".join(f"* {f}" for f in config.DESENVOLVEDOR_FUNCOES)
@@ -482,86 +533,94 @@ def mostrar_territorio(df: pd.DataFrame, p: dict):
     if diag.poligono is None:
         st.warning(f"Limite de {diag.nome} não encontrado: mapas sem contorno e densidade indisponível.", icon="🗺️")
 
-    if municipio:
-        resumo_municipio(diag, p)
-    else:
-        resumo_area(diag)
-    st.markdown("#### 🧭 Localização")
-    mostrar_figura(figuras["localizacao"], st.columns([3, 1])[0])
-    if nowcast is not None:
-        st.divider()
-        secao_nowcast(diag, nowcast)
-
-    st.divider()
-    st.markdown("### 📈 Diagnóstico Geral e Análise de Sazonalidade")
-    if municipio:
-        g1, g2 = st.columns(2)
-        mostrar_figura(figuras["top_estado"], g1)
-        mostrar_figura(figuras["evolucao"], g2)
-    else:
-        mostrar_figura(figuras["evolucao"], st.columns([1, 1])[0])
-    st.markdown("#### 🗓️ Padrão Sazonal de Incidência (média mensal, p10–p90 e ano de referência)")
-    mostrar_figura(figuras["sazonalidade"])
-
-    if municipio:
-        st.divider()
-        st.markdown("### 📋 Tabelas de Ranking e Comparativo Regional")
-        t1, t2 = st.columns(2)
-        with t1:
-            st.markdown(f"**Top {len(diag.ranking_estado)} {diag.ano_fim} - Estado**")
-            tabela(diag.ranking_estado)
-        with t2:
-            st.markdown(f"**Comparativo na {diag.titulo_regiao} ({diag.ano_fim})**")
-            if diag.ranking_regiao.empty:
-                st.caption("Região do município não identificada.")
-            else:
-                tabela(diag.ranking_regiao)
-
-    st.divider()
-    st.markdown("### 🗺️ Mapeamento Espacial e Sazonalidade Trimestral")
-    st.caption(f"Mapas 1, 2 e 4: densidade de kernel gaussiano (desvio de {fmt_numero(DESVIO_KERNEL_KM)} km); "
-               "cada foco marcado com uma cruz preta.")
-    mostrar_figura(figuras["mapa_dispersao"])
-    if municipio:
-        if diag.areas:
-            st.markdown("**🌲 Unidades de Conservação e Terras Indígenas no Município**")
-            tabela(diag.tabela_areas)
+    nomes = ["Resumo", "Cenário atual", "Gráficos e rankings", "Mapas", "Anomalias",
+             "Áreas protegidas", "Estatísticas (modelo INPE)", "Metodologia"]
+    abas = st.tabs(nomes)
+    with abas[0]:
+        if municipio:
+            resumo_municipio(diag, p)
         else:
-            st.caption("Nenhuma Unidade de Conservação ou Terra Indígena da base sobreposta a este município.")
-    mostrar_figura(figuras["mapa_densidade"])
-    mostrar_figura(figuras["mapa_recorrencia"])
-    if figuras["mapa_trimestral"] is not None:
-        st.markdown("#### 🔄 Migração Espacial Sazonal (densidade de kernel por trimestre)")
-        mostrar_figura(figuras["mapa_trimestral"])
-    mostrar_anomalias({tipo: figuras.get(f"anomalia_{tipo}") for tipo in TIPOS_ANOMALIA}, diag.municipio)
+            resumo_area(diag)
+        st.markdown("#### 🧭 Localização")
+        mostrar_figura(figuras["localizacao"], st.columns([3, 1])[0])
+    with abas[1]:
+        if nowcast is None:
+            st.info("Sem dados recentes da base para o cenário atual.")
+        else:
+            secao_nowcast(diag, nowcast)
+    with abas[2]:
+        st.markdown("### 📈 Diagnóstico Geral e Análise de Sazonalidade")
+        if municipio:
+            g1, g2 = st.columns(2)
+            mostrar_figura(figuras["top_estado"], g1)
+            mostrar_figura(figuras["evolucao"], g2)
+        else:
+            mostrar_figura(figuras["evolucao"], st.columns([1, 1])[0])
+        st.markdown("#### 🗓️ Padrão Sazonal de Incidência (média mensal, p10–p90 e ano de referência)")
+        mostrar_figura(figuras["sazonalidade"])
 
-    rankings_areas(diag)
+        if municipio:
+            st.markdown("### 📋 Tabelas de Ranking e Comparativo Regional")
+            t1, t2 = st.columns(2)
+            with t1:
+                st.markdown(f"**Top {len(diag.ranking_estado)} {diag.ano_fim} - Estado**")
+                tabela(diag.ranking_estado)
+            with t2:
+                st.markdown(f"**Comparativo na {diag.titulo_regiao} ({diag.ano_fim})**")
+                if diag.ranking_regiao.empty:
+                    st.caption("Região do município não identificada.")
+                else:
+                    tabela(diag.ranking_regiao)
+    with abas[3]:
+        st.markdown("### 🗺️ Mapeamento Espacial e Sazonalidade Trimestral")
+        st.caption(f"Mapas 1, 2 e 4: densidade de kernel gaussiano (desvio de {fmt_numero(DESVIO_KERNEL_KM)} km); "
+                   "cada foco marcado com uma cruz preta.")
+        mostrar_figura(figuras["mapa_dispersao"])
+        if municipio:
+            if diag.areas:
+                st.markdown("**🌲 Unidades de Conservação e Terras Indígenas no Município**")
+                tabela(diag.tabela_areas)
+            else:
+                st.caption("Nenhuma Unidade de Conservação ou Terra Indígena da base sobreposta a este município.")
+        mostrar_figura(figuras["mapa_densidade"])
+        mostrar_figura(figuras["mapa_recorrencia"])
+        if figuras["mapa_trimestral"] is not None:
+            st.markdown("#### 🔄 Migração Espacial Sazonal (densidade de kernel por trimestre)")
+            mostrar_figura(figuras["mapa_trimestral"])
+    with abas[4]:
+        mostrar_anomalias({tipo: figuras.get(f"anomalia_{tipo}") for tipo in TIPOS_ANOMALIA}, diag.municipio)
+    with abas[5]:
+        rankings_areas(diag)
+    with abas[6]:
+        secao_estatisticas(diag.focos, diag.municipio, diag.ano_inicio, diag.ano_fim, chave)
+    with abas[7]:
+        st.markdown("### 📐 Síntese Espacial e Metodologia")
+        s1, s2 = st.columns(2)
+        with s1:
+            st.markdown("**Parâmetros Técnicos e Operacionais**")
+            grade = nota_grade(grade_do_territorio(diag.poligono.bounds)) if diag.poligono is not None else "—"
+            focos_ano = diag.focos[diag.focos["ano"] == diag.ano_fim]
+            tabela(pd.DataFrame([
+                {"Parâmetro": "Ocorrências Ano Atual",
+                 "Diagnóstico": f"{fmt_inteiro(len(focos_ano))} focos mapeados em {diag.ano_fim}"},
+                {"Parâmetro": "Acumulado Histórico",
+                 "Diagnóstico": f"{fmt_inteiro(len(diag.focos))} focos ({diag.ano_inicio}-{diag.ano_fim})"},
+                {"Parâmetro": "Grade Geospacial", "Diagnóstico": grade},
+                {"Parâmetro": "Densidade de kernel", "Diagnóstico": f"Gaussiano, desvio de {fmt_numero(DESVIO_KERNEL_KM)} km"},
+                {"Parâmetro": "Aplicação Operacional", "Diagnóstico": "Definição de rotas de sobrevoo e bases de combate"},
+            ]))
+        with s2:
+            st.markdown("**Nota Metodológica Oficial**")
+            st.info(NOTA_METODOLOGICA)
 
-    st.divider()
-    secao_estatisticas(diag.focos, diag.municipio, diag.ano_inicio, diag.ano_fim, chave)
+    with st.sidebar, st.container(border=True):
+        exportar_pacote(diag, figuras, est, nowcast)
+    fechar_figuras(figuras)
 
-    st.divider()
-    st.markdown("### 📐 Síntese Espacial e Metodologia")
-    s1, s2 = st.columns(2)
-    with s1:
-        st.markdown("**Parâmetros Técnicos e Operacionais**")
-        grade = nota_grade(grade_do_territorio(diag.poligono.bounds)) if diag.poligono is not None else "—"
-        focos_ano = diag.focos[diag.focos["ano"] == diag.ano_fim]
-        tabela(pd.DataFrame([
-            {"Parâmetro": "Ocorrências Ano Atual",
-             "Diagnóstico": f"{fmt_inteiro(len(focos_ano))} focos mapeados em {diag.ano_fim}"},
-            {"Parâmetro": "Acumulado Histórico",
-             "Diagnóstico": f"{fmt_inteiro(len(diag.focos))} focos ({diag.ano_inicio}-{diag.ano_fim})"},
-            {"Parâmetro": "Grade Geospacial", "Diagnóstico": grade},
-            {"Parâmetro": "Densidade de kernel", "Diagnóstico": f"Gaussiano, desvio de {fmt_numero(DESVIO_KERNEL_KM)} km"},
-            {"Parâmetro": "Aplicação Operacional", "Diagnóstico": "Definição de rotas de sobrevoo e bases de combate"},
-        ]))
-    with s2:
-        st.markdown("**Nota Metodológica Oficial**")
-        st.info(NOTA_METODOLOGICA)
 
-    st.divider()
-    st.markdown("### 📥 Central de Exportação do Pacote Completo")
+def exportar_pacote(diag, figuras, est, nowcast):
+    """Pacote completo do diagnóstico (PDF, Excel, GeoJSON, PNG) no painel esquerdo."""
+    st.markdown("**📦 Pacote completo do diagnóstico**")
     if diag.focos.empty:
         st.warning("Sem dados para exportar no período")
     else:
@@ -572,11 +631,9 @@ def mostrar_territorio(df: pd.DataFrame, p: dict):
             st.success("✅ Diagnóstico concluído! O download do pacote completo em ZIP foi iniciado automaticamente.")
         else:
             st.success("✅ Diagnóstico concluído com sucesso!")
-        botao_pacote(pacote_, "📦 BAIXAR PACOTE COMPLETO (.ZIP) — PDF, Excel, GeoJSON e Imagens PNG")
-        st.caption("O pacote ZIP contém o Relatório PDF Oficial diagramado, Planilha Excel com séries temporais e "
-                   "as estatísticas no modelo INPE, Grade QGIS .geojson, tabelas em CSV e todas as imagens/mapas "
-                   "em formato PNG.")
-    fechar_figuras(figuras)
+        botao_pacote(pacote_, "⬇️ Baixar pacote completo (.zip)")
+        st.caption("Relatório PDF, planilha Excel, grades para o QGIS (.geojson), tabelas em CSV e todos os mapas "
+                   "e gráficos em PNG.")
 
 
 # ------------------------------------------------- Cenário atual (nowcast)
@@ -629,10 +686,10 @@ def secao_nowcast(diag, n):
 # ------------------------------------------- Estatísticas (modelo INPE)
 
 COR_TABELA_MINIMO = "background-color: #FFD54F; font-weight: bold"
-COR_TABELA_MAXIMO = "background-color: #E53935; color: white; font-weight: bold"
+COR_TABELA_MAXIMO = "background-color: #B23A1E; color: white; font-weight: bold"
 COR_LINHA_RESUMO = {"Mínimo": "background-color: #FBC02D; font-weight: bold",
                     "Média": "background-color: #FB8C00; font-weight: bold",
-                    "Máximo": "background-color: #E53935; color: white; font-weight: bold"}
+                    "Máximo": "background-color: #B23A1E; color: white; font-weight: bold"}
 ABAS_COMPARATIVOS = {"Comparativo mensal": "mensal", "Comparativo semanal": "semanal",
                      "Comparativo 1º semestre": "semestre1", "Comparativo 2º semestre": "semestre2"}
 
@@ -902,12 +959,12 @@ def mostrar_mapa_interativo(chave: str, recentes, territorio, estado: str | None
     caminho_estado = estados_disponiveis().get(estado) if estado else None
     municipios = municipios_simplificados(Path(caminho_estado)) if caminho_estado else ()
     deck = deck_focos_recentes(recentes, territorio, municipios, rec, config.FUNDO_SATELITE)
-    st.pydeck_chart(deck, height=ALTURA_PX, key=chave, selection_mode="single-object",
-                    on_select=(lambda: abrir_diagnostico_do_mapa(chave, estado)) if estado else "ignore")
-    itens = legenda(recentes, rec)
-    st.markdown(" &nbsp; ".join(f'<span style="display:inline-block;width:11px;height:11px;background:{cor};'
-                                f'border:1px solid #555;margin-right:4px"></span>{texto}' for cor, texto in itens),
-                unsafe_allow_html=True)
+    c_mapa, c_legenda = st.columns([3.2, 1])
+    with c_mapa:
+        st.pydeck_chart(deck, height=ALTURA_PX, key=chave, selection_mode="single-object",
+                        on_select=(lambda: abrir_diagnostico_do_mapa(chave, estado)) if estado else "ignore")
+    with c_legenda, st.container(border=True):
+        st.markdown(legenda_html(recentes, rec), unsafe_allow_html=True)
     st.caption("Role para aproximar, arraste para mover; passe o mouse num foco para ver a data"
                + (" e **clique num município para abrir o diagnóstico dele**." if estado else ".")
                + " Imagem: Sentinel-2 cloudless 2024 (EOX, CC BY-NC-SA 4.0).")
@@ -927,7 +984,8 @@ def cenario_em_cache(caminho: str, estado: str, regiao: str, ultimo_dia, proviso
     return cenario_atual(base_focos(caminho), estado, regiao, ultimo_dia, cobertura(caminho)[0], list(provisorios))
 
 
-def secao_cenario_estado(caminho: str, caminho_estado, estado: str, regiao: str, ano_inicio: int, ano_fim: int):
+def secao_cenario_estado(caminho: str, caminho_estado, estado: str, regiao: str, ano_inicio: int, ano_fim: int,
+                          abas=None):
     """Cenário atual do estado/região: últimas 24 h e última semana, com o PDF para exportar."""
     situacao = situacao_da_base(config.BASES_DIR)
     if situacao["ultimo_dia"] is None:
@@ -935,54 +993,69 @@ def secao_cenario_estado(caminho: str, caminho_estado, estado: str, regiao: str,
     provisorios = tuple(situacao["provisorios"])
     with st.spinner("Montando o cenário atual..."):
         cen = cenario_em_cache(caminho, estado, regiao, situacao["ultimo_dia"], provisorios)
-    st.markdown(f"### 🛰️ Cenário atual — {cen.nome}: últimas 24 h e última semana")
-    st.caption(f"Últimas 24 h = passagem mais recente do satélite de referência processada pelo INPE "
-               f"(**{cen.dia:%d/%m/%Y}**{', ainda parcial' if cen.provisorio else ''}); última semana = "
-               f"{cen.inicio_semana:%d/%m} a {cen.dia:%d/%m}. Entre parênteses, a média dos mesmos dias nos anos "
-               "anteriores.")
-    indicadores = indicadores_cenario(cen)
-    for linha in (indicadores[:3], indicadores[3:]):
-        for coluna, (rotulo, valor) in zip(st.columns(3), linha):
-            coluna.metric(rotulo, valor)
-    # recordes do mês: sempre com o ano da passagem (o filtro de período só muda a sazonalidade e as estatísticas)
     atual = panorama_em_cache(caminho, estado, ano_inicio, cen.dia.year, regiao)
-    with st.container(border=True):
-        st.markdown("**📝 Cenário atual**")
-        for paragrafo in texto_do_cenario(cen, atual.acima_no_mes, atual.anos_recorde):
-            st.markdown(paragrafo)
+    with abas[0]:
+        st.markdown(f"### {cen.nome}: focos nas últimas 24 horas e na última semana")
+        st.caption(f"Últimas 24 h = passagem mais recente do satélite de referência processada pelo INPE "
+                   f"({cen.dia:%d/%m/%Y}{', ainda parcial' if cen.provisorio else ''}); última semana = "
+                   f"{cen.inicio_semana:%d/%m} a {cen.dia:%d/%m}.")
+        # o mapa abre a página: é o que a sala de situação olha primeiro
+        limite = limite_da_regiao(caminho_estado, cen.sigla_uf, cen.regiao)
+        rec = recorrencia_do_cenario(caminho, caminho_estado, estado, regiao, situacao["ultimo_dia"], provisorios)
+        mostrar_mapa_interativo("mapa_panorama", cen.nowcast.recentes(DIAS_SEMANA), limite, estado, rec)
 
-    limite = limite_da_regiao(caminho_estado, cen.sigla_uf, cen.regiao)
-    rec = recorrencia_do_cenario(caminho, caminho_estado, estado, regiao, situacao["ultimo_dia"], provisorios)
-    mostrar_mapa_interativo("mapa_panorama", cen.nowcast.recentes(DIAS_SEMANA), limite, estado, rec)
-    c1, c2 = st.columns([1.1, 1])
-    with c1:
-        st.altair_chart(interativo_nowcast_semanal(cen.nowcast), width="stretch")
-    with c2:
-        abas = st.tabs(["Municípios", "UCs e TIs", f"Focos de {cen.dia:%d/%m}"])
-        with abas[0]:
-            tabela(cen.municipios, height=260)
-        with abas[1]:
-            if cen.areas.empty:
-                st.caption("Nenhum foco em área protegida na última semana.")
-            else:
-                tabela(cen.areas, height=260)
-        with abas[2]:
-            tabela(cen.focos_24h.assign(NM_MUN=cen.focos_24h["NM_MUN"].str.title()).rename(columns={
-                "data": "Data", "NM_MUN": "Município", "regiao": "Região", "lat": "Latitude", "lon": "Longitude"}),
-                height=260)
+        # boletim (texto) ao lado dos indicadores
+        c_boletim, c_numeros = st.columns([1.35, 1], gap="large")
+        with c_boletim:
+            paragrafos = "".join(f"<p>{escape(p)}</p>"
+                                 for p in texto_do_cenario(cen, atual.acima_no_mes, atual.anos_recorde))
+            st.markdown(f'<div class="boletim"><h4>Boletim de {cen.dia:%d/%m/%Y}</h4>'
+                        f'<div class="quando">Gerado automaticamente com a base buscada no BDQueimadas/INPE até '
+                        f'{cen.ultimo_dia_base:%d/%m/%Y}, do satélite de referência AQUA-Tarde (AQUA_M-T)</div>'
+                        f'{paragrafos}</div>', unsafe_allow_html=True)
+        with c_numeros:
+            fichas = []
+            for rotulo, valor in indicadores_cenario(cen):
+                numero, _, nota = valor.partition(" (")
+                nota = nota.rstrip(")")
+                fichas.append(f'<div class="ficha"><div class="rotulo">{escape(rotulo)}</div>'
+                              f'<div class="numero">{escape(numero)}</div>'
+                              f'<div class="nota">{escape(nota) if nota else "&nbsp;"}</div></div>')
+            st.markdown(f'<div class="fichas">{"".join(fichas)}</div>', unsafe_allow_html=True)
+            st.caption("Médias = mesmos dias nos anos anteriores que a base cobre por inteiro.")
 
-    municipios_acima_da_maxima(caminho, cen, atual, ano_inicio)
+        c1, c2 = st.columns([1.1, 1])
+        with c1:
+            st.altair_chart(interativo_nowcast_semanal(cen.nowcast), width="stretch")
+        with c2:
+            listas = st.tabs(["Municípios", "UCs e TIs", f"Focos de {cen.dia:%d/%m}"])
+            with listas[0]:
+                tabela(cen.municipios, height=260)
+            with listas[1]:
+                if cen.areas.empty:
+                    st.caption("Nenhum foco em área protegida na última semana.")
+                else:
+                    tabela(cen.areas, height=260)
+            with listas[2]:
+                tabela(cen.focos_24h.assign(NM_MUN=cen.focos_24h["NM_MUN"].str.title()).rename(columns={
+                    "data": "Data", "NM_MUN": "Município", "regiao": "Região", "lat": "Latitude", "lon": "Longitude"}),
+                    height=260)
 
-    with st.spinner("Calculando as anomalias do mês..."):
-        mostrar_anomalias(anomalias_cenario_png(caminho, caminho_estado, estado, regiao, situacao["ultimo_dia"],
-                                                provisorios), cen.nome)
+    with abas[1]:
+        municipios_acima_da_maxima(caminho, cen, atual, ano_inicio)
 
-    b1, b2 = st.columns(2)
+    with abas[2]:
+        with st.spinner("Calculando as anomalias do mês..."):
+            mostrar_anomalias(anomalias_cenario_png(caminho, caminho_estado, estado, regiao, situacao["ultimo_dia"],
+                                                    provisorios), cen.nome)
+
+    b1 = st.sidebar.container()
+    b2 = st.sidebar.container()
     with b1:
         st.markdown("**📄 Relatório do cenário (PDF)**")
         st.caption(f"Inclui no fim as estatísticas de focos ativos de {ano_inicio}–{ano_fim} (período do filtro).")
         chave = (estado, regiao, cen.dia, situacao["ultimo_dia"], len(cen.focos_semana), ano_inicio, ano_fim)
-        if st.button("📄 Gerar relatório e pacote do cenário", key="cenario_gerar"):
+        if st.button("📄 Gerar relatório e pacote", key="cenario_gerar", width="stretch"):
             with st.spinner("Gerando o relatório e o pacote do cenário..."):
                 limite = limite_da_regiao(caminho_estado, cen.sigla_uf, cen.regiao)
                 pan = panorama_em_cache(caminho, estado, ano_inicio, ano_fim, regiao)
@@ -1117,60 +1190,63 @@ def pagina_panorama():
     regiao = c2.selectbox(f"Filtrar por {tipo}", [TODAS, *regioes], key="pan_regiao")
     ano_inicio, ano_fim = c3.slider("Período", min_value=anos[0], max_value=anos[-1], value=(anos[0], anos[-1]),
                                     step=1, key="pan_anos")
-    secao_cenario_estado(caminho, estados[estado], estado, regiao, ano_inicio, ano_fim)
-    st.divider()
-    with st.spinner("Calculando o panorama..."):
-        pan = panorama_em_cache(caminho, estado, ano_inicio, ano_fim, regiao)
-    i, fim = pan.indicadores, pan.fim_dados
-    ate = f" até {fim:%d/%m}" if fim.year == ano_fim and fim < date(ano_fim, 12, 31) else ""
+    abas = st.tabs(["Cenário atual", "Municípios acima da máxima", "Anomalias do mês", f"Ano de {ano_fim}",
+                    "Estatísticas (modelo INPE)"])
+    secao_cenario_estado(caminho, estados[estado], estado, regiao, ano_inicio, ano_fim, abas)
+    with abas[3]:
+        with st.spinner("Calculando o panorama..."):
+            pan = panorama_em_cache(caminho, estado, ano_inicio, ano_fim, regiao)
+        i, fim = pan.indicadores, pan.fim_dados
+        ate = f" até {fim:%d/%m}" if fim.year == ano_fim and fim < date(ano_fim, 12, 31) else ""
 
-    st.markdown(f"### 📌 {pan.nome} — focos de calor em {ano_fim}{ate}")
-    st.caption("Satélite de referência (AQUA_M-T); município de cada foco pelo cruzamento com o limite do IBGE. "
-               f"Comparações com o mesmo período (1º de janeiro{ate or ' a 31 de dezembro'}) dos anos anteriores "
-               "do período que a base cobre por inteiro.")
-    k = st.columns(3)
-    k[0].metric(f"Focos em {ano_fim}{ate}", fmt_inteiro(i["focos_ano_ate_data"]),
-                fmt_percentual(i["variacao_ano_anterior_pct"], sinal=True) + f" vs. {ano_fim - 1}"
-                if i["variacao_ano_anterior_pct"] is not None else None, delta_color="inverse")
-    k[1].metric(f"Mesmo período de {ano_fim - 1}", fmt_inteiro(i["ano_anterior_ate_data"] or 0))
-    k[2].metric("Média do mesmo período", fmt_inteiro(round(i["media_ate_data"])) if i["media_ate_data"] else "—",
-                fmt_percentual(i["variacao_media_pct"], sinal=True) + " (ano atual vs. média)"
-                if i["variacao_media_pct"] is not None else None, delta_color="inverse")
-    k = st.columns(3)
-    k[0].metric(f"Últimos 7 dias (até {fim:%d/%m})", fmt_inteiro(i["ultimos_7"]))
-    k[1].metric("Últimos 30 dias", fmt_inteiro(i["ultimos_30"]))
-    k[2].metric(f"Municípios com focos em {ano_fim}", fmt_inteiro(i["municipios_com_focos"]))
+        st.markdown(f"### 📌 {pan.nome} — focos de calor em {ano_fim}{ate}")
+        st.caption("Satélite de referência (AQUA_M-T); município de cada foco pelo cruzamento com o limite do IBGE. "
+                   f"Comparações com o mesmo período (1º de janeiro{ate or ' a 31 de dezembro'}) dos anos anteriores "
+                   "do período que a base cobre por inteiro.")
+        k = st.columns(3)
+        k[0].metric(f"Focos em {ano_fim}{ate}", fmt_inteiro(i["focos_ano_ate_data"]),
+                    fmt_percentual(i["variacao_ano_anterior_pct"], sinal=True) + f" vs. {ano_fim - 1}"
+                    if i["variacao_ano_anterior_pct"] is not None else None, delta_color="inverse")
+        k[1].metric(f"Mesmo período de {ano_fim - 1}", fmt_inteiro(i["ano_anterior_ate_data"] or 0))
+        k[2].metric("Média do mesmo período", fmt_inteiro(round(i["media_ate_data"])) if i["media_ate_data"] else "—",
+                    fmt_percentual(i["variacao_media_pct"], sinal=True) + " (ano atual vs. média)"
+                    if i["variacao_media_pct"] is not None else None, delta_color="inverse")
+        k = st.columns(3)
+        k[0].metric(f"Últimos 7 dias (até {fim:%d/%m})", fmt_inteiro(i["ultimos_7"]))
+        k[1].metric("Últimos 30 dias", fmt_inteiro(i["ultimos_30"]))
+        k[2].metric(f"Municípios com focos em {ano_fim}", fmt_inteiro(i["municipios_com_focos"]))
 
-    caminho_estado = estados[estado]
-    with st.spinner("Desenhando o mapa e a sazonalidade..."):
-        imagens = figuras_panorama(caminho, caminho_estado, estado, ano_inicio, ano_fim, regiao)
-    g1, g2 = st.columns([1.1, 1])
-    with g1:
-        st.markdown(f"#### 🗺️ Densidade dos focos em {ano_fim}")
-        st.image(imagens["mapa"], width="stretch")
-    with g2:
-        st.markdown("#### 📈 Focos por ano")
-        serie = pd.DataFrame({"Ano": [str(a) for a in pan.serie_anual], "Focos": list(pan.serie_anual.values())})
-        st.altair_chart(alt.Chart(serie).mark_bar(color="#b52b27").encode(
-            x=alt.X("Ano:N", axis=alt.Axis(labelAngle=-45)), y=alt.Y("Focos:Q", axis=alt.Axis(format="d")),
-            tooltip=["Ano", alt.Tooltip("Focos:Q", format="d")]).properties(height=330), width="stretch")
-        st.image(imagens["sazonalidade"], width="stretch")
+        caminho_estado = estados[estado]
+        with st.spinner("Desenhando o mapa e a sazonalidade..."):
+            imagens = figuras_panorama(caminho, caminho_estado, estado, ano_inicio, ano_fim, regiao)
+        g1, g2 = st.columns([1.1, 1])
+        with g1:
+            st.markdown(f"#### 🗺️ Densidade dos focos em {ano_fim}")
+            st.image(imagens["mapa"], width="stretch")
+        with g2:
+            st.markdown("#### 📈 Focos por ano")
+            serie = pd.DataFrame({"Ano": [str(a) for a in pan.serie_anual], "Focos": list(pan.serie_anual.values())})
+            st.altair_chart(alt.Chart(serie).mark_bar(color="#b52b27").encode(
+                x=alt.X("Ano:N", axis=alt.Axis(labelAngle=-45)), y=alt.Y("Focos:Q", axis=alt.Axis(format="d")),
+                tooltip=["Ano", alt.Tooltip("Focos:Q", format="d")]).properties(height=330), width="stretch")
+            st.image(imagens["sazonalidade"], width="stretch")
 
-    st.divider()
-    if pan.regiao is None and not pan.por_regiao.empty:
-        st.markdown(f"### 🧭 Focos por {pan.tipo_regiao} — {ano_fim}")
-        tabela_com_recordes(pan.por_regiao, pan.recordes_regiao, pan.anos_recorde)
-    st.markdown(f"### 📋 Municípios com mais focos em {ano_fim}{ate} — {pan.nome}")
-    st.caption("Empate decidido pelos focos no último mês e, depois, na última semana dos dados.")
-    recordes = pan.recordes_municipios
-    tabela_com_recordes(pan.ranking_municipios.head(TOP_MUNICIPIOS),
-                        recordes.head(TOP_MUNICIPIOS) if recordes is not None else None, pan.anos_recorde)
-    if len(pan.ranking_municipios) > TOP_MUNICIPIOS:
-        with st.expander(f"Ver todos os {len(pan.ranking_municipios)} municípios com focos em {ano_fim}"):
-            tabela_com_recordes(pan.ranking_municipios, recordes, pan.anos_recorde, altura=600)
+        st.divider()
+        if pan.regiao is None and not pan.por_regiao.empty:
+            st.markdown(f"### 🧭 Focos por {pan.tipo_regiao} — {ano_fim}")
+            tabela_com_recordes(pan.por_regiao, pan.recordes_regiao, pan.anos_recorde)
+        st.markdown(f"### 📋 Municípios com mais focos em {ano_fim}{ate} — {pan.nome}")
+        st.caption("Empate decidido pelos focos no último mês e, depois, na última semana dos dados.")
+        recordes = pan.recordes_municipios
+        tabela_com_recordes(pan.ranking_municipios.head(TOP_MUNICIPIOS),
+                            recordes.head(TOP_MUNICIPIOS) if recordes is not None else None, pan.anos_recorde)
+        if len(pan.ranking_municipios) > TOP_MUNICIPIOS:
+            with st.expander(f"Ver todos os {len(pan.ranking_municipios)} municípios com focos em {ano_fim}"):
+                tabela_com_recordes(pan.ranking_municipios, recordes, pan.anos_recorde, altura=600)
 
-    st.divider()
-    secao_estatisticas(pan.focos, pan.nome, ano_inicio, ano_fim, prefixo="pan_est_")
+
+    with abas[4]:
+        secao_estatisticas(pan.focos, pan.nome, ano_inicio, ano_fim, prefixo="pan_est_")
 
 
 PAGINAS = {
@@ -1183,12 +1259,14 @@ PAGINAS = {
 def main():
     pagina = st.sidebar.radio("Navegação", list(PAGINAS), label_visibility="collapsed", key="navegacao")
     st.sidebar.divider()
-    if config.caminho_focos().exists():
-        with st.sidebar:
-            painel_atualizacao(recarregar_ao_mudar=PAGINAS[pagina] is not pagina_diagnostico)
-        st.sidebar.divider()
     PAGINAS[pagina]()
-    sobre()
+    # sempre no rodapé do painel esquerdo (o CSS empurra este bloco para baixo)
+    with st.sidebar, st.container(key="rodape_lateral"):
+        if config.caminho_focos().exists():
+            painel_atualizacao(recarregar_ao_mudar=PAGINAS[pagina] is not pagina_diagnostico)
+        else:
+            with st.expander("⋯  Sobre o sistema"):
+                conteudo_sobre()
     render_footer()
 
 

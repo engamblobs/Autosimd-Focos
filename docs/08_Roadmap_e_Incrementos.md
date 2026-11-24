@@ -33,12 +33,13 @@ Cada incremento é um pedido separado ao Claude. Só avançar quando o anterior 
 | 16 | Mapas interativos e de localização | Mapa interativo (zoom, quadrícula do mês, limites municipais, clique = diagnóstico) no Panorama, no cenário atual do diagnóstico (município, UC, TI) e na abertura do Diagnóstico; mapa de localização na tela e nos PDFs; protótipo dos mapas de desvio para aprovação (P32) | ✔ 2026-10-29 |
 | 17 | Anomalias e ajustes da rodada 7 | Anomalias de quantidade, localização e combinada com significância (Benjamini–Hochberg) nos PDFs; semanas do último trimestre com faixas dos meses (Panorama no lugar do gráfico de 30 dias); recordes nas tabelas do Panorama; mapa interativo só na abertura do Diagnóstico; cabeçalho com versão e SIMD (também no DESASTRE, DESASTRE 2 e HIDRO) | ✔ 2026-10-29 |
 | 18 | Rodada 8 | Grupos de células significativas contornados, pontos com a cor da célula e bordas verdes; grade de 10 km nas anomalias do cenário; anomalias na tela; recorde do ano de referência na tabela mês a mês; tabela com todos os municípios; municípios acima da máxima no mês, texto do cenário, sazonalidades e pacote completo do cenário | ✔ 2026-10-29 |
+| 19 | Interface nova (v0.14) | Tema próprio (cores e fontes Fira, offline), Panorama e Diagnóstico em abas, boletim do cenário, legenda do mapa com as cores reais, relatório/GeoJSON/pacote no painel esquerdo, bloco "⋯" da base INPE no rodapé (abre na atualização e recolhe), sem círculo de significância dentro dos grupos | ✔ 2026-11-23 |
 
 ## Próximos incrementos (propostos — dependem de `docs/09`)
 
 | # | Incremento | Depende de |
 |---|---|---|
-| 19 | (a definir com o usuário) | — |
+| 20 | (a definir com o usuário) | — |
 
 ## Modelo de pedido ao Claude
 

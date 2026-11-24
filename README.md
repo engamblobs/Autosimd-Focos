@@ -9,7 +9,7 @@ Sala de Informações e Monitoramento de Desastres (SIMD) — Coordenadoria Esta
 
 O AutoSIMD-FOCOS automatiza a análise histórica de focos de calor detectados por satélite (BDQueimadas/INPE) e gera, em poucos segundos, um diagnóstico territorial pronto para apoiar o planejamento de prevenção e combate a incêndios florestais.
 
-Situação: **v0.13 (29/10/2026)** — mapas de anomalia de focos (quantidade, localização e combinada, com teste de significância), mapa interativo na abertura do Diagnóstico (clique no município = diagnóstico), mapa de localização, municípios acima da máxima histórica do mês com texto do cenário e pacote completo do cenário, recordes destacados nas tabelas e gráfico semanal do último trimestre. A v0.12 trouxe o cenário atual do estado e o pacote Windows verificado (SHA256); a v0.11 reorganizou o v0.10 no modelo do AutoSIMD-DESASTRE.
+Situação: **v0.14 (23/11/2026)** — interface nova: tema próprio (cores e fontes, funciona offline), Panorama e Diagnóstico organizados em abas, boletim do cenário atual, legenda do mapa com as cores reais, exportações no painel esquerdo e o bloco da base INPE no rodapé. A v0.13 trouxe os mapas de anomalia e o mapa interativo; a v0.12, o cenário atual do estado; a v0.11 reorganizou o v0.10 no modelo do AutoSIMD-DESASTRE.
 
 > [!IMPORTANT]
 > **Desenvolvido com Inteligência Artificial.** Todo o código deste programa foi desenvolvido com a utilização de ferramentas de Inteligência Artificial, com acompanhamento, revisão e testes realizados pelos técnicos de Defesa Civil da CEDEC/PA. Os resultados são produzidos automaticamente a partir de bases públicas oficiais e devem ser interpretados por profissionais habilitados. A identidade visual (logo do AutoSIMD-FOCOS) também foi gerada com IA (ChatGPT).

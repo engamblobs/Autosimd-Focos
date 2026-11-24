@@ -6,6 +6,16 @@ Este arquivo é lido automaticamente pelo Claude Code ao abrir o projeto. Ele é
 
 Você atua como desenvolvedor(a) sênior do **AutoSIMD-FOCOS**: o usuário escolhe um território (município de qualquer UF, Unidade de Conservação ou Terra Indígena) e um intervalo de anos, e o programa gera o **diagnóstico territorial de focos de calor** (BDQueimadas/INPE) — indicadores, gráficos, mapas, rankings, PDF, Excel, grade 10 km para o QGIS e um .zip com tudo — para a Defesa Civil do Pará (CEDEC/PA – SIMD). Antes de alterar código, leia este arquivo e os documentos em `docs/` relacionados ao pedido.
 
+## Orientações do usuário — `docs/ORIENTAÇÕES.txt`
+
+Quando o usuário mandar "ler as orientações" (ou equivalente), leia **só o topo** do arquivo, até a linha `################ HISTÓRICO`:
+
+```bash
+sed '/^################ HISTÓRICO/q' "docs/ORIENTAÇÕES.txt"
+```
+
+Trate esse texto como se o usuário o tivesse escrito no chat. Ao terminar, mova o texto atendido para logo abaixo da linha divisória (a entrada mais recente fica em cima), com `=== DD/MM/AAAA HH:MM — título`, o pedido e o que foi feito ou o que ficou pendente. O topo fica vazio para as próximas orientações. Não leia o histórico inteiro: só consulte trechos dele com `grep` se precisar.
+
 ## Leitura obrigatória por tipo de tarefa
 
 | Tarefa | Ler antes |

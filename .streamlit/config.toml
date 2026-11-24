@@ -1,0 +1,55 @@
+# Configuração do Streamlit no desenvolvimento (python run_app.py ou streamlit run app.py, a partir desta pasta).
+# O tema ([theme]) também vai para o pacote Windows: empacotamento/empacotar_windows.py junta este bloco ao
+# empacotamento/config.toml. Cores e fontes: docs/10 §0 (identidade visual).
+[server]
+enableStaticServing = true      # fontes em static/fontes
+
+[theme]
+base = "light"
+backgroundColor = "#EEF1EC"            # Névoa
+secondaryBackgroundColor = "#E1E7DE"   # Copa
+textColor = "#1D2B23"                  # Tinta
+primaryColor = "#0D6E7D"               # Rio
+linkColor = "#0D6E7D"
+redColor = "#B23A1E"                   # Brasa
+borderColor = "#C9D2C6"
+dataframeHeaderBackgroundColor = "#E1E7DE"
+baseRadius = "6px"
+buttonRadius = "6px"
+showWidgetBorder = true
+font = "Fira Sans, sans-serif"
+headingFont = "Fira Sans Condensed, Fira Sans, sans-serif"
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+headingFontSizes = ["2.1rem", "1.6rem", "1.3rem", "1.1rem", "1rem", "0.95rem"]
+baseFontSize = 15
+metricValueFontSize = "1.45rem"
+metricValueFontWeight = 600
+
+[[theme.fontFaces]]
+family = "Fira Sans"
+url = "app/static/fontes/FiraSans-Regular.ttf"
+weight = 400
+[[theme.fontFaces]]
+family = "Fira Sans"
+url = "app/static/fontes/FiraSans-Medium.ttf"
+weight = 500
+[[theme.fontFaces]]
+family = "Fira Sans"
+url = "app/static/fontes/FiraSans-SemiBold.ttf"
+weight = 600
+[[theme.fontFaces]]
+family = "Fira Sans Condensed"
+url = "app/static/fontes/FiraSansCondensed-Medium.ttf"
+weight = 500
+[[theme.fontFaces]]
+family = "Fira Sans Condensed"
+url = "app/static/fontes/FiraSansCondensed-SemiBold.ttf"
+weight = 600
+[[theme.fontFaces]]
+family = "Fira Sans Condensed"
+url = "app/static/fontes/FiraSansCondensed-Bold.ttf"
+weight = 700
+
+[theme.sidebar]
+backgroundColor = "#E1E7DE"
+secondaryBackgroundColor = "#D5DDD1"

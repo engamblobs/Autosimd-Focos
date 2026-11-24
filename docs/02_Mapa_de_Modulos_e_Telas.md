@@ -2,7 +2,9 @@
 
 ## Hierarquia principal (implementada em `app.py`)
 
-Barra lateral: navegação, **🛰️ Base de focos (INPE)** (dados até que dia, se o dia é parcial, andamento da busca em segundo plano, próxima busca e o toggle "Nowcast"), parâmetros da análise (só na página Diagnóstico) e "Sobre o Sistema & Desenvolvedor".
+Barra lateral (v0.14): navegação; parâmetros da análise (Diagnóstico) ou, no Panorama, **Relatório do cenário (PDF)** e **Focos de calor em GeoJSON**; no Diagnóstico processado, o **Pacote completo**; e, preso no rodapé, o bloco **"⋯ Base de focos (INPE) e sobre o sistema"** — recolhido; abre sozinho quando a base está sendo atualizada ("⏳ Atualizando…"), mostra "✅ Base de focos atualizada" e recolhe 5 s depois.
+
+Panorama em abas: Cenário atual (mapa, boletim, indicadores, semana, municípios/UCs/focos) · Municípios acima da máxima · Anomalias do mês · Ano de <ano> · Estatísticas (modelo INPE). Diagnóstico em abas: Resumo (com localização) · Cenário atual · Gráficos e rankings · Mapas · Anomalias · Áreas protegidas · Estatísticas (modelo INPE) · Metodologia.
 
 O programa abre direto com a base local. A busca de focos novos no INPE roda em segundo plano (`docs/03` §5); o painel **🛰️ Base de focos (INPE)** da barra lateral mostra dados até que dia, o andamento da busca, a próxima busca e o toggle **Nowcast (busca a cada 4 h)**.
 

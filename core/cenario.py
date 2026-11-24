@@ -218,7 +218,7 @@ def texto_do_cenario(cen: CenarioAtual, acima_no_mes: pd.DataFrame | None = None
     """Parágrafos que apresentam o cenário atual (tela e PDF do cenário), só com números calculados."""
     i = cen.nowcast.indicadores
     nome, dia = cen.nome, cen.dia
-    parcial = " (dia ainda parcial)" if cen.provisorio else ""
+    parcial = ", dia ainda parcial" if cen.provisorio else ""
     textos = [
         f"Na passagem mais recente do satélite de referência ({dia:%d/%m/%Y}{parcial}) foram detectados "
         f"{fmt_inteiro(i['ultimo_dia'])} focos de calor {em_territorio(nome)}"

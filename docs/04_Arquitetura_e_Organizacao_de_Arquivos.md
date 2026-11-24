@@ -7,6 +7,8 @@ Autosimd-Focos 2/                  # pasta de trabalho; o projeto continua se ch
 ├── CLAUDE.md                      # regras para o desenvolvimento com IA
 ├── README.md
 ├── app.py                         # interface Streamlit (somente telas)
+├── .streamlit/config.toml         # tema da interface (cores e fontes; o [theme] vai para o pacote)
+├── static/fontes/                 # Fira Sans e Fira Sans Condensed (OFL), servidas pelo Streamlit
 ├── run_app.py                     # inicia o Streamlit sem console (1ª porta livre entre 8521 e 8570) + abre o navegador
 ├── requirements.txt, pytest.ini
 ├── .gitignore                     # ignora BASES_GEOJSON/, dist/, python/, backup/

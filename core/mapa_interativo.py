@@ -162,3 +162,53 @@ def municipio_clicado(selecao) -> str | None:
     except (KeyError, TypeError, AttributeError):
         return None
     return objetos[0].get("nome") if objetos else None
+
+
+# ------------------------------------------------ Legenda com as cores como aparecem
+
+FUNDO_TIPICO_SATELITE = (34, 48, 30)     # verde-escuro médio da floresta no Sentinel-2 cloudless
+
+
+def cor_sobre_satelite(rgb, opacidade: int = OPACIDADE_GRADE, fundo=FUNDO_TIPICO_SATELITE) -> str:
+    """Cor que a célula semitransparente realmente mostra sobre a imagem (mistura com o fundo)."""
+    a = opacidade / 255
+    r, g, b = (round(a * c + (1 - a) * f) for c, f in zip(rgb, fundo))
+    return f"rgb({r},{g},{b})"
+
+
+def legenda_html(recentes, rec=None) -> str:
+    """Legenda do mapa interativo em HTML: pontos (cor pela idade), quadrícula (cores já misturadas com o
+    satélite, como aparecem no mapa) e linhas."""
+    def item(simbolo: str, texto: str) -> str:
+        return f'<div style="display:flex;align-items:center;gap:8px;margin:3px 0">{simbolo}<span>{texto}</span></div>'
+
+    def ponto(cor: str) -> str:
+        return (f'<span style="flex:none;width:12px;height:12px;border-radius:50%;background:{cor};'
+                'border:1.5px solid #000"></span>')
+
+    def linha(cor: str, espessura: int) -> str:
+        return f'<span style="flex:none;width:22px;height:0;border-top:{espessura}px solid {cor}"></span>'
+
+    partes = ['<div style="font-size:13px;line-height:1.35">', "<b>Focos de calor (pontos)</b>"]
+    for idade, cor in CORES_IDADE.items():
+        n = int((recentes["idade"] == idade).sum()) if len(recentes) else 0
+        if n:
+            partes.append(item(ponto(cor), f"{idade} — {fmt_inteiro(n)}"))
+    if rec is not None and rec.matriz.any():
+        maximo = int(rec.matriz.max())
+        periodo = f"{rec.anos[0]}–{rec.anos[-1]}" if rec.anos else ""
+        degrade = ", ".join(cor_sobre_satelite(cor_da_recorrencia(1 + (maximo - 1) * k / 4, maximo))
+                            for k in range(5))
+        partes += [
+            f'<div style="margin-top:10px"><b>Quadrícula — anos com foco em {MESES_NOME[rec.mes - 1]}</b></div>',
+            f'<div style="height:14px;border-radius:3px;margin:4px 0 2px;background:linear-gradient(90deg,{degrade})">'
+            "</div>",
+            f'<div style="display:flex;justify-content:space-between;font-size:12px"><span>1 ano</span>'
+            f"<span>{maximo} anos</span></div>",
+            f'<div style="font-size:12px;color:#888">{periodo}. Onde não há quadrícula, não houve foco nesse '
+            "mês.</div>",
+        ]
+    partes += ['<div style="margin-top:10px"><b>Linhas</b></div>',
+               item(linha("rgb(0,229,255)", 3), "Território analisado"),
+               item(linha("#ffffff", 1), "Limites municipais")]
+    return "".join(partes) + "</div>"

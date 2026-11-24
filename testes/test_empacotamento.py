@@ -132,3 +132,18 @@ def test_python_portatil_conferido_pelo_sha256(empacotar):
 def test_leia_me_ensina_a_conferir_o_zip(pacote, empacotar):
     leia_me = (pacote / "LEIA-ME.txt").read_text(encoding="utf-8")
     assert f"Get-FileHash .\\{empacotar.NOME}_v{config.APP_VERSAO}.zip" in leia_me
+
+
+def test_tema_e_fontes_no_pacote(pacote):
+    import tomllib
+
+    config_pacote = (pacote / ".streamlit" / "config.toml").read_text(encoding="utf-8")
+    lido = tomllib.loads(config_pacote)                       # TOML válido, sem seção repetida
+    assert lido["server"]["enableStaticServing"] is True and lido["theme"]["primaryColor"] == "#0D6E7D"
+    assert lido["server"]["headless"] is True                 # a config do pacote continua valendo
+    assert "enableStaticServing = true" in config_pacote and "[theme]" in config_pacote
+    assert 'primaryColor = "#0D6E7D"' in config_pacote
+    fontes = {f.name for f in (pacote / "static" / "fontes").iterdir()}
+    assert {"FiraSans-Regular.ttf", "FiraSansCondensed-SemiBold.ttf", "OFL.txt"} <= fontes
+    for url in re.findall(r'url = "app/static/(fontes/[^"]+)"', config_pacote):
+        assert (pacote / "static" / url).exists(), url
