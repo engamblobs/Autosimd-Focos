@@ -1,6 +1,327 @@
+
 ################ HISTÓRICO — escreva as orientações novas ACIMA desta linha ################
+
+
 # O Claude lê só o que está acima desta linha. Depois de atender, ele move o que você escreveu
 # para cá (mais recente primeiro), com data-hora e o que foi feito.
+
+=== 27/11/2026 20:37 — Dashboard do Panorama, downloads em 3 botões (PDF resumido e completo), roadmap e lançamento da v0.15
+PERGUNTAS: nenhuma.
+
+PEDIDO:
+- faça um modelo de versão de vizualização em modo dashboard para o diagnóstico estadual tbm deve ser em um modelo similar a municipal , deve ter o gráfico de focos por semana no ultimo trimestre, o mapa interativo, a tabela de municípios interativa, o a tabela e o gráfico de sazonalidade dos municípios acima da máxima, o mapa de anomalia estadual, o gráfico de sazonalidade estadual, a secção de estatísticas, o título. mantenha a interatividade nas planilhas do mesmo jeito que na municipal.
+a seção de dowload de arquivos deve ficar no local da caixa vermelha, o pdf de vulnerabilidades deve vir junto no pacote de download. remova o botão do local atual. na caixa deve ter apenas 3 botões um para baixar o pdf do diagnoostico resumido (pdf), um para baixar o diagnóstico completo (pdf) e um para baixar o pacote completo (todos os arquivos do pacote). no pdf resumido deve ir o pdf do diagnóstico do município mas apenas um mapa por tipo deles, do de densidade apenas o de densidade média, o de focos nos ultimos sete dias, no de recorrência apenas um, no de anomalia apenas um e sem o texto de descrição da metodologia, faça de forma que fiquem os 4 mapas em uma única página, não vai entrar no pdf as tabelas comparativas e notas metodológicas,o gráfico de focos por dia nos ultimos 30 dias. o gráfico de focos por semana no ultimo semestre vai pra secção de diagnóstico geral e sazonalidade. o pdf do diagnóstico completo deve ir com todas as informações e o pdf de vulnerabilidades anexado.
+- no pdf de vulnerabilidades remova a planilha de eventos de fogo.
+faça o lançamento para o github depois disso.
+- (no chat, durante o trabalho) adicione no github uma seção de roadmap do projeto com os planos futuros: otimização da versão dashboard para televisões, dashboard para UCs e TIs, interface para celular, hospedagem do site, publicação científica e integração com o MapBiomas Fogo via API.
+
+FEITO (conferido no app real em 1920×1080 com o Pará, São Félix do Xingu e Altamira, e com testes):
+1. Dashboard do Panorama do Estado, no modelo do município (o mesmo botão 📺/📄 liga nas duas páginas):
+   - esquerda: título com caixas de seleção ("PARÁ:" e a região — "Estado inteiro" ou uma região) e o
+     período no botão 📅; focos por semana no último trimestre; sazonalidade do estado; estatísticas
+     (interativas, como no município); caixa com o relatório/pacote do cenário e os focos em GeoJSON;
+   - direita: indicadores das últimas 24 h e da semana; mapa interativo (clique no município = diagnóstico);
+     tabela dos municípios da última semana (dois cliques = diagnóstico) ao lado do mapa de anomalia do mês
+     (botão ⇄ alterna quantidade/localização/combinada); municípios acima da máxima com a sazonalidade ao
+     lado (um clique na tabela troca o gráfico).
+2. Dashboard do município: a caixa de downloads ficou no lugar da caixa vermelha, com 3 botões:
+   📄 Diagnóstico resumido (PDF), 📑 Diagnóstico completo (PDF) e 📦 Pacote completo (.zip).
+   Enquanto a busca ao vivo (focos, vento, fumaça) não termina, a caixa mostra "⏳ Preparando os arquivos…"
+   com os botões desligados — porque o completo leva o boletim da vulnerabilidade. No legado, os mesmos 3
+   botões no painel esquerdo. O botão "Gerar boletim (PDF)" saiu da seção de vulnerabilidade.
+3. PDF resumido: resumo e localização; só os indicadores do cenário atual (sem o gráfico dos 30 dias);
+   gráficos com o de focos por semana no último trimestre dentro de "Diagnóstico Geral e Sazonalidade";
+   os 4 mapas numa página (densidade acumulada, últimos 7 dias, recorrência, anomalia de quantidade), sem os
+   textos de metodologia; estatísticas. Sem os outros mapas, tabelas comparativas e notas metodológicas.
+   Obs.: você escreveu "último semestre" num ponto e "último trimestre" noutro; o gráfico que existe é o das
+   13 semanas (último trimestre) — foi esse que entrou.
+4. PDF completo: tudo, com o boletim das localidades sob risco anexado no fim ("ANEXO — …"). O pacote .zip
+   traz os dois PDFs e a pasta vulnerabilidade/ (boletim solto, GeoJSON das localidades, eventos e cones,
+   planilha e imagens).
+5. Boletim da vulnerabilidade sem a tabela dos eventos de fogo (a página 3 diz quantos eventos há e mantém
+   os gráficos; a lista completa fica na planilha).
+6. README: seção "Roadmap" (versões publicadas + planos futuros: dashboard otimizado para TV, dashboard para
+   UC e TI, interface para celular, hospedagem do site, publicação científica, MapBiomas Fogo via API) —
+   também em docs/08 como incrementos 27 a 32. Prévia atualizada (com o dashboard do Panorama e o boletim novo).
+7. Lançamento v0.15 no GitHub com as imagens de antes e depois nas novidades (o "antes" foi capturado da própria
+   v0.14 rodando à parte). Pacote Windows montado.
+
+=== 27/11/2026 18:08 — Painel recolhido refeito, título com caixas de seleção, boletim PDF da vulnerabilidade e prévia no GitHub
+PERGUNTAS: nenhuma nova. P43–P47 respondidas (abaixo, na entrada de 27/11 16:00) e registradas no docs/09.
+Para publicar no GitHub (README com a prévia, código e versão nova) preciso do seu "pode publicar".
+
+PEDIDO:
+- ajuste o painel lateral esquerdo, a vizualização está toda quebrada e desorganizada, deixe apenas o icone sem a caixa de seleção, a caixa inferior também está quebrada.(segue imagem demonstrando)
+- no titulo do estado adicine uma caixa de seleção onde o usuário possa escolher o estado e uma caixa onde possa escolher o município, no estado ao escolher um estado novo ele carrega o nome dos municípios desse estado e deixa aguardando a escolha do município, depois que o usuário escolher o município ele carrega o diagnóstico dele. (segue imagem demonstrando)
+- no github adicione uma seção de prévia com imagens do programa, da interface, do modo dashboard, do pdf gerado para mostrar ao usuário que quer ver como é antes o programa antes de instalar.
+- para cada nova feature que você descrever no github ao lançar as atualizações, quando for algo vizual, adicione uma imagem ilustrando as alterações feitas, se precisar fazer ilustrações com setas, textos ou caixas na imagem ou coisa assim faça, se for uma alteração em algo que já existia antes adicione faça um print de como era antes e como era depois. isso deve ser um padrão para os log de atualizações no github.
+- no arquivo orientações.txt, passe a deixar as perguntas que vc fizer no início logo abaixo  do "=== 27/11/2026 16:00 — Visualização dashboard (TV) do diagnóstico de município" e antes do pedido anterior.
+
+FEITO (conferido no app real em 1920×1080 com Amazonas/Apuí e Pará/São Félix do Xingu, e com testes):
+1. Painel esquerdo recolhido refeito: agora é uma coluna de botões só com o ícone, centralizados, sem caixas nem
+   bolinhas de seleção: ☰ (abre o painel), 🏠 🔥 🗂️ (navegação; a página aberta fica realçada), 📄 (volta ao
+   legado), 🚀 (processa), ⬇️ (pacote, aparece depois do diagnóstico) e, no pé, ⋯ — que abre num balão a base INPE
+   e o "Sobre" (a caixa de baixo, que estava quebrada). Antes eu escondia os controles por CSS e sobravam pedaços.
+2. Título do dashboard: "PARÁ:" e o município viraram caixas de seleção com cara de título (letra grande; a seta
+   ao lado abre a lista, dá para digitar para filtrar). Trocou o estado → carrega os municípios dele e fica
+   "Escolha o município…" esperando; escolheu o município → processa o diagnóstico na hora (sem baixar o pacote).
+   Sem diagnóstico aberto, aparece o título e o mapa do estado (clicar num município também abre).
+   Fiz a própria caixa ser o título em vez de pôr uma caixa ao lado do nome (ficaria "PARÁ: [Pará ▾]" repetido);
+   se preferir a caixa separada do texto, é só dizer. No dashboard o estado e o município saem do painel
+   esquerdo; ao voltar para o legado, a escolha continua.
+3. GitHub — seção "Prévia" no README (ainda NÃO enviada): 5 imagens em docs/imagens/previa/ — Panorama, diagnóstico
+   em abas, modo dashboard, páginas do relatório PDF e páginas do boletim de localidades. As telas são capturas
+   reais 1920×1080 feitas por uma ferramenta nova (ferramentas/capturar_telas.py, Firefox sem janela), que serve
+   para refazer as imagens a cada versão.
+4. Padrão das notas de versão (anotado no CLAUDE.md e na memória): toda novidade visual vem com imagem; mudança
+   em algo que já existia vem com print de antes e depois, com setas/caixas/texto quando ajudar. Os "antes"
+   desta rodada já estão guardados em docs/imagens/novidades/proxima/ (o seu print do painel quebrado e o do
+   título), junto com os "depois".
+5. Este histórico: perguntas no início de cada entrada, logo abaixo do título (como nesta).
+6. Respostas P43–P47:
+   - P43/P44: mantidos.
+   - P45: PM2,5 agora pelas faixas do índice de qualidade do ar da CONAMA 491/2018 (24 h): moderada > 25, ruim > 50,
+     muito ruim > 75, péssima > 125 µg/m³ (1, 2, 3 e 3 pontos). Nova coluna "Qualidade do ar (CONAMA)".
+   - P46: escala e método iguais. Para descrever a vulnerabilidade, duas colunas novas: "Perfil" (o que pesou:
+     indígena/quilombola, comunidade rural ou área urbana · isolada · fogo recorrente) e "Motivo" (o que expôs a
+     localidade: fogo a caminho ~N h, fumaça do evento a caminho, foco a X km, ar ruim…).
+   - P47: boletim em PDF feito no modelo proposto. Botão "📄 Gerar boletim (PDF)" na seção de vulnerabilidade
+     (legado e dashboard) → "⬇️ Boletim pronto" com o PDF e o pacote .zip (PDF, GeoJSON das localidades, eventos e
+     cones para o QGIS, planilha e PNG). Páginas: situação (fichas, texto automático e mapa sobre satélite),
+     lista de prioridade (motivo, hora de chegada, PM2,5/CONAMA, distância da sede, coordenadas), eventos e tempo
+     (tabela, severidade por passagem, vento 24 h no maior evento ativo, PM2,5 24 h nas mais expostas) e método.
+     Exemplo real de hoje (São Félix do Xingu, 5 páginas) mostrado na conversa.
+7. Docs atualizados: 05, 06 (§9.1), 07 (§13 PM2,5), 08 (incrementos 24 e 25), 09 (respostas) e 10 (§9.1, §10).
+Nada foi enviado ao GitHub.
+
+=== 27/11/2026 16:00 — Visualização dashboard (TV) do diagnóstico de município
+PEDIDO:
+- fiz um modelo de vizualização em dashboard que quero usar para o programa (/home/lobs/Automacoes/Autosimd-Focos 2/REFERENCIA PARA MODO DASHBOARD.jpg) , essa deve funcionar apenas para quando ver o diagnóstico dos municípios por enquanto, e deve ser opcional, adicione um botão no painel esquerdo para trocar entre a vizualização em dashboard ou legado.
+- agora vou passar algumas observações quando a esse dashboard, primeiro leia toda a imagem e identifique as partes que quero nele, tirei prints dos itens do diagnóstico e colei do jeito que quer que estejam dispostos no dashboard, esse dashboard deve funcionar para vizualizar na televisão então deixe as letras bem legíveis.
+- o painel lateral deve ter um modo recolhindo como na imagem, deve se expandir quando o usuário quiser vizualizar, deixe os botões dele funcionais no modo recolhido ainda mas apenas o icone deles.
+- o rodapé deve ter o logo do autosimd focos e ao clicar no logo o usuário deve ser direcionado para a página inicial.
+- ignore a caixa verde no mapa de vulnerabilidade, fiz errado, faça com que ele busque os focos e o vento e a fumaça automaticamente depois de carregar toda a página mas não trave ela só deixe um sinal de carregando no lugar da caixa verde que deve exibir a porcentagem de carregamento desses dados e depois que terminar deve sumir.
+- nas caixas rochas deve ser um botão que alterna entre os mapas do mesmo tipo, no de densidade deve expandir exibindo os por trimestre também.
+- mantenha a interatividade nas tabelas de dois cliques no nome dos municípios ou na planilha de localidade para mostrar no mapa.
+- a caixa da parte de estatísticas deve funcionar normalmente de forma interativa como era antes, na tabela mes a mes deve ter a barra de correr para baixo e para o lado e um botão no canto para expandir que faz mostrar a planilha completa na tela.
+
+FEITO (conferido no app real numa tela 1920×1080, com São Félix do Xingu e Altamira, e com testes):
+1. Botão no alto do painel esquerdo da página Diagnóstico: "📺 Visualização dashboard" / "📄 Visualização
+   legado". Vale só para o diagnóstico de município; UC/TI e as outras páginas ficam como estavam.
+2. Li a imagem e montei as duas colunas como você colou:
+   - esquerda: mapa de localização + "PARÁ: São Félix Do Xingu" grande, sazonalidade, estatísticas
+     (interativas) e o comparativo da região;
+   - direita: resumo executivo, os três mapas (densidade, recorrência, anomalia), o mapa da
+     vulnerabilidade com a legenda e a tabela das localidades por risco.
+   Letras grandes para TV: números do resumo, título do município, textos e abas maiores; sem o
+   cabeçalho institucional (o rodapé fica).
+3. Painel esquerdo recolhido (só ícones): ☰ abre, "« Recolher o painel" fecha. Funcionam recolhidos:
+   navegação (🏠 🔥 🗂️), 📄/📺 (trocar o modo), 🚀 (processar), ⬇️ (pacote) e ⋯ (base INPE).
+4. Rodapé com o logo do AutoSIMD-FOCOS (em todas as páginas): clicar leva à página inicial, sem
+   recarregar.
+5. Mapa da vulnerabilidade: ignorei a caixa verde. Os focos, o vento e a fumaça agora são buscados
+   SOZINHOS depois que a página carrega, em segundo plano (não trava). No canto do mapa aparece
+   "Buscando focos, vento e fumaça… NN%" e some quando termina; o mapa se atualiza sozinho. Vale
+   também no modo legado (lá o botão virou "🔄 Buscar de novo agora").
+6. Caixas rosa = botão ⇄ no canto do cartão. Densidade: acumulada → do ano → por trimestre (o de
+   trimestre se expande e ocupa a linha inteira; os outros dois mapas descem). Anomalia: quantidade
+   → localização → combinada. A recorrência não tinha caixa rosa: ficou fixa.
+7. Dois cliques continuam funcionando: no nome do município (comparativo da região → diagnóstico) e na
+   localidade (tabela → mapa vai até ela).
+8. Estatísticas: interativas como antes (mesma seção). Os parâmetros ficam no botão ⚙️ e ela abre no
+   "Acumulado mensal" (como na sua imagem). A tabela mês a mês tem altura fixa com barras de rolagem
+   para baixo e para o lado; o botão de tela cheia no canto da própria tabela mostra a planilha
+   inteira.
+
+OBSERVAÇÃO: na amostra dos testes (só 2023–2024) as anomalias não existem (precisam de 3 anos); o
+cartão mostra um aviso nesse caso.
+
+PERGUNTAS ABERTAS (as mesmas — também no docs/09; responda aqui ou lá):
+P43. Proximidade: 5 / 10 / 20 km servem? -> sim
+P44. Cones: fogo 24 h e fumaça 6 h (±30°), vento a meia-chama = 40%? -> siga assim.
+P45. PM2,5: OMS (25/50/75) ou CONAMA 491/2018? siga da conama
+P46. Vulnerabilidade saturando em 3 nos municípios grandes: subo os limites ou acrescento critérios? não suba o critério. deve manter assim. se necessaário faça novas categorias que descrevam essa vulnerabilidade mas não altere a escala ou mude a metodologia.
+P47. Aprova a proposta do PDF só da vulnerabilidade (docs/10 §9.1)? faça um pdf no modelo que vc pensou e me mostre
+
+Nada foi enviado ao GitHub.
+
+=== 25/11/2026 16:58 — Desempenho do diagnóstico, busca ao vivo mais rápida e mapa da vulnerabilidade legível
+PEDIDO:
+- mude o texto do botão de :"preparar geojson dos focos" para "baixar pontos de focos de calor" e troque o icone de mapa para um de download, mude apenas no botão, não precisa mudar no título da seção.
+- o tempo para abrir o diagnóstico de um município está muito demorado depois da ultima atualização, verifique o que pode estar atrasando, se for algo simples corrija. opte por separar as etapas de processamento, organize elas de forma que sempre processe primeiro as primeiras abas, ainda que todas as etapas não terminem deve ser possível o usuário ver o que já foi gerado.
+- o botão de buscar evento de fogo, vento e fumaça está demorando muito para processar verifique uma forma de acelerar esse processo, verifique as etapas uma a uma se há formas de reduzir algo em cada uma.
+- a vizualização final depois que carrega é uma confusão, não sei o que é localidade ali e o que é evento de fogo e o que é foco de calor. mude o icone das localidades para não confundir com fogos de calor, use uma casinha e reduza o tamanho de exibição dela no mapa.
+- considere ao ter multiplos indicadores de vento se sobrepondo usar apenas um para representar eles para evitar a confusão na leitura.
+- considere usar ao invez do centroide do evento de fogo o centroide da frente de fogo ativa nos ultimos dias, verifique se na api é possível buscar esse polígono no lugar da frente de fogo, vamos trabalhar com ele no lugar pois da a noção mais próxima da realidade de onde está o fogo.
+- para reduzir o processamento, calcule o vento apenas para o centroide da frente de fogo.
+- os cones cinzas estão uma confusão também, verifique uma forma de fazer eles de forma dissolvida por categorias de risco as categorias devem ser por numero de sobreposição dos cones ou outra metodologia que você achar pertinente. adicione um botão para exportar esses poligonos em geojson.
+- ao dar dois cliques no nome da localidade  ou no evento de fogo dentro da tabela eu quero que o mapa interativo me direcione para ele.
+- adicione a posibilidade de ativar ou desativar a camada de focos de calor, de fumaça ou de avanço de fogo de vento.
+- adicione a possibilidade de escolher grau de opacidade para cada camada.
+
+FEITO:
+1. Botão: "⬇️ Baixar pontos de focos de calor" (só o botão; o título da seção ficou igual).
+2. Diagnóstico lento — causas e correção:
+   - o mapa do cenário sobre o satélite esperava o servidor de imagens (EOX), que estava sem responder
+     (medi 50 s só nessa figura); agora desiste em até 8 s e, depois de uma falha, sai sem imagem por
+     5 min sem esperar a rede de novo;
+   - qualquer clique na página (os botões e chaves novos) refazia TODAS as figuras e o PDF; agora
+     figuras, imagens e pacote ficam guardados na sessão;
+   - etapas na ordem das abas: as abas aparecem logo (~6 s na primeira vez, já contando a leitura da
+     base) e cada uma gera só as suas figuras; o que fica pronto já aparece; o pacote PDF/.zip é
+     montado por último (tudo pronto em ~20 s em São Félix do Xingu).
+3. Busca de eventos, vento e fumaça: de 8,7 s para ~3 s. Etapa por etapa:
+   - eventos, frentes de fogo e PM2,5 vão em paralelo (cada uma ~1,5–2,2 s);
+   - vento só no centro da frente de fogo dos eventos ATIVOS (antes: em todos os eventos);
+   - PM2,5 uma consulta por célula de 0,1° com localidade (o modelo CAMS tem ~0,4°, então localidades
+     vizinhas dividem o mesmo valor sem perder nada);
+   - o tempo da busca aparece ao lado do botão.
+4. Localidades viraram casinhas menores (cor = risco). Os focos de calor da base (7 dias) entraram no
+   mapa como círculos pela idade, e as frentes de fogo em amarelo — legenda separa os três.
+5. Setas de vento sobrepostas viram uma só (média vetorial por célula de 1/10 do lado do município).
+6. Frente de fogo: a API tem a camada "Frente de Fogo (24h)" (mv_deteccoes_classificadas), com o
+   polígono dos focos recentes de cada evento. Agora o cone parte do centro da frente (não do evento
+   inteiro) e as distâncias são medidas a partir dela.
+7. Vento calculado só nesse centro da frente (item 3).
+8. Cones dissolvidos pelo número de eventos que se sobrepõem em cada lugar (1, 2, 3 ou mais), com tons
+   mais fortes onde há mais sobreposição (fogo em vermelhos, fumaça em cinzas). Botão
+   "⬇️ Cones em GeoJSON" exporta esses polígonos (tipo, sobreposição, classe).
+9. Dois cliques no nome da localidade ou no número do evento, nas tabelas, centralizam o mapa nele;
+   o botão "↺ Ver o município" volta ao enquadramento inteiro.
+10/11. Botão "🗂️ Camadas" acima do mapa: liga/desliga e opacidade (0–100%) de localidades, focos de
+   calor, eventos, frentes, avanço do fogo, fumaça e vento.
+Tudo conferido no app real (São Félix do Xingu) e com testes.
+
+PERGUNTAS ABERTAS (as mesmas da rodada anterior — também no docs/09; responda aqui ou lá):
+P43. Proximidade: foco do último dia a até 5 km = 3; última semana a até 5 km (ou último dia a até
+     10 km) = 2; última semana a até 20 km = 1. Servem?
+P44. Cones: fogo em 24 h e fumaça em 6 h (máx. 100 km, ±30°); vento a meia-chama = 40% do de 10 m.
+P45. PM2,5: OMS (25/50/75 µg/m³) ou CONAMA 491/2018? 
+P46. Vulnerabilidade saturando em 3 nos municípios grandes: subo os limites (50 km; 75% dos anos) ou
+     acrescento critérios (população, acesso por estrada)?
+P47. Aprova a proposta do PDF só da vulnerabilidade (docs/10 §9.1)?
+
+Nada foi enviado ao GitHub.
+
+=== 25/11/2026 16:01 — Vento, Sentinel-2 SWIR e protótipo de vulnerabilidade (respostas P40–P42)
+PEDIDO:
+- as respostas do P40 ao P42 estão a seguir na ordem, a partir de agora coloque as perguntas aqui nesse arquivo também para eu não precisar ter que abrir o obsidian, continue preenchendo lá com as perguntas e depois com as minhas respostas mas mande aqui também.
+- siga na alternativa, mas faça de forma que só busque se o usuário ativar um switch que ficará logo acima do nowcast. no caso vai buscar apenas para o estado em análise.
+- pode implementar usando o do painel do fogo mesmo.
+- gostei de todas as ideias, faça uma seção de protótipo dentro do diagnóstico do município que vai trabalhar vulnerabilidades. considere para o item B do cone calcular usando a metodologia de eventos de fogo, aprenda sobre ela e depois use a api do painel do fogo para buscar os eventos de fogo e usar eles para essa dinamica.
+
+- pense também em como ficaria um relatório em pdf só dessa secção.
+
+FEITO:
+0. Perguntas: a partir de agora vão também aqui (numeradas como no docs/09), além do docs/09.
+   Você pode responder em qualquer um dos dois. Anotei no CLAUDE.md.
+1. Vento (P40): chave "Vento (Open-Meteo)" no painel ⋯, logo acima do Nowcast. Ligada, busca junto
+   com cada coleta de focos (ao abrir e a cada 4 h com o Nowcast) só para o estado em análise (o da
+   página aberta) e só nas quadrículas de 0,25° com foco nos últimos 7 dias. Testado no Pará: 492
+   quadrículas, previsão de 72 h, em BASES_GEOJSON/vento.parquet (guarda 30 dias). Deixei a chave
+   DESLIGADA depois do teste.
+2. Sentinel-2 (P41): chave "Sentinel-2 em realce de fogo (SWIR — Painel do Fogo)" nos mapas
+   interativos (Panorama e vulnerabilidade). Testado: o mosaico aparece por cima do satélite.
+3. Vulnerabilidade (P42): nova aba "Vulnerabilidade (protótipo)" no diagnóstico de município.
+   - Estudei a metodologia do Painel do Fogo: evento = 3 ou mais focos VIIRS com buffers de 400 m que
+     se cruzam e área >= 1 km²; ativo = detecção nas últimas 48 h; em observação = 2 a 4 dias; por
+     passagem de satélite há área acumulada, incremento, velocidade de expansão (ha/h), FRP e o
+     indicador de severidade. A API (WFS público) responde em ~1,5 s por retângulo.
+   - Abre só com a base (proximidade dos focos + vulnerabilidade). O botão "Buscar eventos de fogo,
+     vento e fumaça" (~8 s) traz os eventos do Painel do Fogo, o vento previsto em cada evento e o
+     PM2,5 previsto em cada localidade.
+   - Cone do fogo (item B): a área do evento cresce na velocidade de expansão medida pelo Painel do
+     Fogo, no formato da elipse de Anderson (mais vento = mais comprida) → quanto a frente avança em
+     24 h e em quantas horas chega a cada localidade. Cone da fumaça: vento médio das próximas 6 h,
+     ±30°. Só eventos ativos.
+   - Mapa (localidades pela classe de risco, eventos, cones, setas de vento), tabela das localidades
+     (com horas para o fogo/fumaça chegarem, PM2,5, distância da sede) e tabela dos eventos.
+   - Testado no app real com São Félix do Xingu: 63 localidades, 42 eventos (17 ativos), 3 aldeias
+     com fumaça prevista em ~3 h.
+   - No teste encontrei e corrigi um defeito que deixava o mapa inteiro cinza (um texto do pydeck lido
+     como expressão). Pode ter relação com o "mapa não renderiza" que você relatou antes: se voltar a
+     acontecer, me diga em qual mapa.
+4. PDF só da seção: proposta no docs/10 §9.1 (resumo abaixo, P47). Ainda não implementei.
+
+PROPOSTA DO PDF (4 páginas, A4, mesmo cabeçalho dos outros PDFs):
+   1) Situação: hora dos dados, 4 fichas, mapa estático com localidades, eventos, cones e vento, e um
+      parágrafo automático ("3 localidades em risco alto: Aldeia X — fumaça do evento N em ~3 h...").
+   2) Lista de prioridade: localidades com risco moderado ou mais, com o MOTIVO (foco perto / fogo a
+      caminho / fumaça a caminho / PM2,5 alto), horas para chegar, PM2,5, distância da sede e
+      coordenadas para despacho.
+   3) Eventos e tempo: tabela dos eventos ativos, gráfico da severidade de cada evento por passagem,
+      vento hora a hora no maior evento e PM2,5 hora a hora nas 5 localidades mais expostas.
+   4) Método e limites, fontes e créditos.
+   No .zip junto: PDF + GeoJSON (localidades com a classe, eventos, cones) + planilha.
+
+PERGUNTAS (também no docs/09 — responda aqui ou lá):
+P43. Proximidade: foco do último dia a até 5 km = 3 pontos; da última semana a até 5 km (ou do último
+     dia a até 10 km) = 2; da última semana a até 20 km = 1. Essas distâncias servem?
+     - use apenas duas categorias para proximidades e devem de próximo ou não, considere próximo apenas o frente de fogo ativa no último dia a até 5km.
+P44. Cones: fogo em 24 h e fumaça em 6 h (máximo 100 km, abertura ±30°); vento a meia-chama = 40% do
+     vento a 10 m. Quer outros horizontes (ex.: fumaça 12 h) ou outra abertura?
+     - verifique na literatura qual a distância máxima de deslocamento da fumaça o que afeta isso e tente aplicar a metodologia, use fogo em 24h e fumaça em 6h. 
+P45. PM2,5: pontos a partir de 25, 50 e 75 µg/m³ (metas intermediárias da OMS). Com o guia da OMS (15)
+     quase todo o Pará contaria na estação do fogo. Prefere OMS ou os padrões da CONAMA 491/2018?
+     pontos a partir de 50 µg/m³.
+P46. Vulnerabilidade: em municípios grandes (São Félix do Xingu) quase toda localidade chega a 3
+     (mais de 30 km da sede E foco a 5 km em metade dos anos). Subo os limites (ex.: 50 km; 75% dos
+     anos) ou acrescento outros critérios (população do Censo, acesso por estrada)?
+     - é possível acrescentar a população do censo por localidade de todas do brasil? se sim isso deve fazer parte da metodologia de definição do risco inclusive para qualquer localidade, considere inclusive a participação de idosos e crianças se esse houver esse dado para cada localidade use isso como grupo de risco prédeterminado.
+P47. Aprova a proposta do PDF acima para eu implementar ?
+     - faça um protótipo desse jeito para eu ver e apontar as correções antes de implementar.
+Nada foi enviado ao GitHub.
+
+=== 25/11/2026 15:04 — Tabelas com duplo clique, localidades do IBGE, vento, Sentinel-2 e localidades vulneráveis
+PEDIDO:
+- Ao dar dois cliques no nome de um município em qualuer tipo de tabela dentro do programa eu quero ser direcionado para o diagnóstico do município. não precisa adicionar uma legenda descrevendo esse tipo de coisa.
+- Se eu estiver vendo a tabela de municípios acima da máxima e clicar uma vez no nome de um município quero que autimaticamente o gráfico de sazonalidade que fica abaixo exiba a sazonalidade desse município. não precisa adicionar uma legenda descrevendo esse tipo de coisa.
+- baixei os kml de localidades dos municípios do brasil (/home/lobs/Downloads/LOCALIDADES_MUN_BRASIL_KML), quero que esses dados sejam integrados a base de dados do programa de forma que não ocupem tanto espaço, verifique se é viável compactar tudo em parquet.
+- verifique uma forma de adicionar a base de dados dados de vento: intensidade e direção por quadrícula, esses dados devem ser coletados durante a coleta de dados nowcast.
+- verifique se é possível adicionar imagens do satélite sentinel 2 em realce de fogo ativo para ativar como camadas no mapa interativo. é uma função que tem no painel do fogo e o mesmo tem uma api pública, não sei se é possível buscar por lá ou há outra forma melhor, verifique o que é melhor priorizando velocidade de coleta das imagens.
+- verifique uma forma de associar os focos de calor a direção e intensidade dos ventos e as localidades em risco próximas em uma nova análise. a ideia é seguir na linha de destacar as localidades mais vulneráveis a incêndios florestais ou fumaça deles. me de ideias de como fazer antes de começar a aplicar.
+
+FEITO:
+1. Dois cliques no nome de um município em qualquer tabela com a coluna "Município" abrem o diagnóstico dele
+   (rankings do diagnóstico, municípios e focos do cenário, acima da máxima, ranking do Panorama). Sem legenda.
+   Conferido no navegador com a base real (Anajás pela tabela "acima da máxima"; Chaves pelo ranking da região).
+2. Um clique num município da tabela "acima da máxima" troca a sazonalidade abaixo (a lista de escolha
+   continua e acompanha o clique). Conferido (Almeirim).
+3. Localidades: viável e já integrado. ferramentas/importar_localidades.py converte os 5.571 KML (1 GB) em
+   BASES_GEOJSON/localidades/ — 87.362 localidades (2,7 MB) + 495 territórios quilombolas (2,6 MB), em 9 s.
+   Localidade que aparece em duas pastas (ex.: povoado e aldeia indígena) virou uma linha com marcas
+   indígena/quilombola/agrovila. Leitura em core/localidades.py; testes com amostra real. Ainda sem tela
+   (vai servir à análise do item 6); ainda não vai no pacote Windows.
+
+VERIFICADO (sem implementar — respostas em docs/09, P40 a P42):
+4. Vento: Open-Meteo (gratuito, sem chave) devolve vento a 10 m (velocidade, direção, rajada), atual e
+   previsão horária, para 200 pontos em ~2,4 s. Proposta: buscar junto com o nowcast (ao abrir e a cada 4 h),
+   grade de 0,5° (~55 km, ~500 pontos no Pará) e guardar 30 dias em vento.parquet. Grade de 0,25° no estado
+   todo passa do limite gratuito (10 mil consultas/dia); alternativa: 0,25° só onde houve foco na semana.
+5. Sentinel-2: o próprio Painel do Fogo (CENSIPAM) publica sem chave a camada WMS "sentinel_swir" (mosaico
+   das imagens mais recentes em realce SWIR) e "sentinel2_footprint" (data da passagem). Testei: ~2 s por
+   ladrilho, imagem certa. É o caminho mais rápido (imagem já processada); entra como camada liga/desliga no
+   mapa interativo. Risco: serviço do governo sem garantia de continuidade. Alternativa: Planetary Computer
+   (mais lenta, sem realce pronto).
+6. Ideias para a análise de localidades vulneráveis (escolha antes de eu começar):
+   a) Proximidade: localidades a até X km (ex.: 5, 10, 20 km) de focos das últimas 24 h / 7 dias,
+      ordenadas por focos próximos e distância do mais perto.
+   b) Cone a favor do vento: de cada foco, um setor na direção para onde o vento sopra (±30°), com
+      comprimento proporcional à velocidade (fogo: poucas horas de avanço; fumaça: dezenas de km). Localidade
+      dentro do cone = exposta; com a previsão de vento, "exposta nas próximas 24 h".
+   c) Fumaça prevista: PM2,5 do CAMS pelo Open-Meteo (testado, gratuito) em cada localidade, com os
+      limites da OMS/CONAMA — mede a fumaça diretamente, não só a direção.
+   d) Vulnerabilidade da localidade: peso maior para aldeias indígenas, comunidades quilombolas, povoados e
+      lugarejos isolados (longe da sede), e para quem tem recorrência histórica de focos ao redor (grade).
+   e) Índice final = exposição (a+b+c) × vulnerabilidade (d), em 3–4 classes.
+   Produtos: tabela das localidades em risco (com dois cliques para o município), camada no mapa interativo
+   (localidades coloridas pelo risco + setas de vento), seção no boletim/PDF do cenário ("localidades sob
+   risco de fumaça nas próximas 24 h") e GeoJSON para o QGIS.
+   Sugestão de ordem: vento (4) → a+b+c → tela e boletim → d/e depois de ver os primeiros resultados.
+
+Pendente: suas respostas para P40 (vento: 0,5° ou 0,25° só onde houve foco; só Pará?), P41 (pode ligar a
+camada Sentinel-2 do Painel do Fogo?) e P42 (quais ideias da análise e com que distâncias/pesos).
+Nada foi enviado ao GitHub.
 
 === 23/11/2026 19:39 — Interface nova no programa real + v0.14 pronta para publicar
 Você pediu:
@@ -32,8 +353,9 @@ Claude fez:
   Release em dist/notas_release_v0.14.md.
 Observação: no empacotamento encontrei e corrigi um erro meu (o config.toml do pacote saía inválido — o
 programa não abriria no Windows); agora há teste que lê o arquivo.
-Pendente: seu "pode publicar" para o commit, a tag v0.14, o push e a Release. Os arquivos docs/.obsidian/
-(configuração do seu editor) estão modificados — não vou incluir no commit, a menos que você queira.
+Publicado em 23/11/2026 (após o seu "pode publicar"): commit b3acfff, tag v0.14 e Release
+https://github.com/engamblobs/Autosimd-Focos/releases/tag/v0.14 (zip conferido, SHA256 1a9da037…b84e).
+docs/.obsidian/ ficou fora do commit.
 
 === 23/11/2026 18:37 — Amostra refeita com as skills novas
 Você pediu:

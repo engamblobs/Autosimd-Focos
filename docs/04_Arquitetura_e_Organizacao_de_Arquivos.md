@@ -32,6 +32,12 @@ Autosimd-Focos 2/                  # pasta de trabalho; o projeto continua se ch
 │   ├── graficos.py                # top do estado, evolução, sazonalidade
 │   ├── mapas.py                   # mapas 1 a 4, localização, recorrência do mês (matplotlib: PDF/PNG)
 │   ├── mapa_interativo.py         # mapa interativo da tela (pydeck): focos recentes, quadrícula, municípios
+│   ├── localidades.py             # localidades do IBGE 2022 e territórios quilombolas (Parquet)
+│   ├── rede.py                    # consultas JSON aos serviços ao vivo (erro = SemDadosAoVivo)
+│   ├── open_meteo.py              # vento a 10 m e PM2,5 previstos (Open-Meteo), em lotes de 100 pontos
+│   ├── vento.py                   # chave Vento + coleta por quadrícula de 0,25° com foco (vento.parquet)
+│   ├── painel_do_fogo.py          # eventos de fogo e indicadores por passagem (WFS do CENSIPAM)
+│   ├── vulnerabilidade.py         # protótipo: localidades × focos, cones de fogo/fumaça, PM2,5, risco
 │   ├── anomalias.py               # anomalias de quantidade, localização e combinada, com significância (P32)
 │   ├── relatorio_pdf.py           # PDF do diagnóstico municipal
 │   ├── relatorio_cenario.py       # PDF do cenário atual do estado/região
@@ -46,6 +52,8 @@ Autosimd-Focos 2/                  # pasta de trabalho; o projeto continua se ch
 │
 ├── BASES_GEOJSON/                 # bases reais (fora do git, vão no pacote) — docs/03
 ├── amostras/bases/                # recorte real pequeno, mesma estrutura, usado nos testes (versionado)
+├── amostras/ao_vivo/              # respostas reais do Painel do Fogo e do Open-Meteo (São Félix do Xingu, 25/11/2026)
+├── amostras/kml_localidades/      # dois KML reais de localidades do IBGE (teste da conversão)
 ├── amostras/inpe/                 # recortes reais dos CSV do INPE, datas trocadas (testes da atualização)
 ├── testes/                        # pytest (conftest.py aponta as bases para a amostra)
 ├── ferramentas/
@@ -54,6 +62,7 @@ Autosimd-Focos 2/                  # pasta de trabalho; o projeto continua se ch
 │   ├── verificar_base.py                   # confere se NM_MUN/UF/UC/TI da base = cruzamento com os polígonos
 │   ├── gerar_municipios_br.py              # gera referencia/municipios_br.csv (Regiões Imediatas)
 │   ├── gerar_limites_uf.py                 # gera referencia/limites_uf.geojson (contorno dos estados)
+│   ├── importar_localidades.py             # KML de localidades do IBGE → BASES_GEOJSON/localidades/*.parquet
 │   └── gerar_amostras.py                   # gera amostras/bases a partir de BASES_GEOJSON
 ├── empacotamento/                 # pasta portátil Windows (padrão AutoSIMD-DESASTRE)
 │   ├── empacotar_windows.py       # monta dist/AutoSIMD-FOCOS_v<versão>/ e o .zip
@@ -83,7 +92,7 @@ barra lateral (território, período)
 - `app.py` lê os caminhos de `core.config` no momento do uso (os testes trocam a pasta das bases).
 - O PDF, os PNGs e a tela usam **as mesmas** figuras e tabelas (nunca recalculam).
 - Caminhos sempre relativos à pasta do programa (`core.config.RAIZ`): o mesmo código roda no Linux e no pacote Windows.
-- Internet só para a busca de focos novos no INPE (`core/atualizacao.py`) e para a imagem de satélite do mapa do cenário atual; sem ela, tudo funciona com a base que existe (o mapa sai sem a imagem).
+- Internet só para a busca de focos novos no INPE (`core/atualizacao.py`), para a imagem de satélite dos mapas e para os dados ao vivo pedidos pelo usuário (vento, eventos do Painel do Fogo, PM2,5, mosaico SWIR); sem ela, tudo funciona com a base que existe (o mapa sai sem a imagem; a vulnerabilidade sai só com a base).
 
 ## 4. Correspondência com o v0.10 (app.py de arquivo único)
 

@@ -70,35 +70,67 @@ COR_MAXIMO = "E53935"
 class Pacote:
     nome: str
     conteudo: bytes
-    pdf: bytes | None = None
+    pdf: bytes | None = None                 # diagnóstico completo (com o anexo da vulnerabilidade)
+    pdf_resumido: bytes | None = None
+    nome_pdf: str = ""
+    nome_pdf_resumido: str = ""
 
 
 # ------------------------------------------------------------------ Figuras
 
-def figuras_territorio(diag, est: EstatisticasMunicipio, nowcast=None, dias_mapa: int = DIAS_MAPA_RELATORIO) -> dict:
-    """Todas as figuras do diagnóstico (as do cenário atual só com ``nowcast``)."""
-    municipio = isinstance(diag, DiagnosticoMunicipio)
-    focos_ano = diag.focos[diag.focos["ano"] == diag.ano_fim]
-    areas = diag.areas if municipio else None
+def _figuras_resumo(diag, est, nowcast, dias_mapa):
     caminho_estado = caminho_do_estado(diag.sigla_uf)
-    figuras = {
-        "localizacao": mapa_localizacao(diag.sigla_uf, diag.poligono, diag.municipio.title(),
-                                        municipios_simplificados(caminho_estado) if caminho_estado else ()),
-        "evolucao": grafico_evolucao_tendencia(diag.serie_anual),
+    return {"localizacao": mapa_localizacao(diag.sigla_uf, diag.poligono, diag.municipio.title(),
+                                            municipios_simplificados(caminho_estado) if caminho_estado else ())}
+
+
+def _figuras_cenario(diag, est, nowcast, dias_mapa):
+    if nowcast is None:
+        return {}
+    areas = diag.areas if isinstance(diag, DiagnosticoMunicipio) else None
+    return {"nowcast_diario": grafico_nowcast(nowcast), "nowcast_semanal": grafico_nowcast_semanal(nowcast),
+            "nowcast_mapa": mapa_recentes(nowcast.recentes(dias_mapa), diag.poligono, diag.municipio,
+                                          nowcast.ultimo_dia, dias_mapa, areas)}
+
+
+def _figuras_graficos(diag, est, nowcast, dias_mapa):
+    figuras = {"evolucao": grafico_evolucao_tendencia(diag.serie_anual), **figuras_estatisticas(est)}
+    if isinstance(diag, DiagnosticoMunicipio):
+        figuras["top_estado"] = grafico_top_estado(diag.top_acumulado, diag.municipio)
+    return figuras
+
+
+def _figuras_mapas(diag, est, nowcast, dias_mapa):
+    areas = diag.areas if isinstance(diag, DiagnosticoMunicipio) else None
+    focos_ano = diag.focos[diag.focos["ano"] == diag.ano_fim]
+    return {
         "mapa_dispersao": mapa_dispersao(focos_ano, diag.poligono, diag.municipio, diag.ano_fim, areas),
         "mapa_densidade": mapa_densidade(diag.focos, diag.poligono, diag.municipio, diag.ano_inicio, diag.ano_fim),
         "mapa_recorrencia": mapa_recorrencia(diag.focos, diag.poligono, diag.ano_inicio, diag.ano_fim),
         "mapa_trimestral": mapa_trimestral(diag.focos, diag.poligono, diag.municipio, diag.ano_inicio, diag.ano_fim),
-        **figuras_estatisticas(est),
     }
-    if municipio:
-        figuras["top_estado"] = grafico_top_estado(diag.top_acumulado, diag.municipio)
-    figuras.update(figuras_anomalias(anomalias_do_diagnostico(diag, est), diag.poligono, diag.municipio.title()))
-    if nowcast is not None:
-        figuras["nowcast_diario"] = grafico_nowcast(nowcast)
-        figuras["nowcast_semanal"] = grafico_nowcast_semanal(nowcast)
-        figuras["nowcast_mapa"] = mapa_recentes(nowcast.recentes(dias_mapa), diag.poligono, diag.municipio,
-                                                nowcast.ultimo_dia, dias_mapa, areas)
+
+
+def _figuras_anomalias(diag, est, nowcast, dias_mapa):
+    return figuras_anomalias(anomalias_do_diagnostico(diag, est), diag.poligono, diag.municipio.title())
+
+
+# Etapas na ordem das abas do diagnóstico: a tela gera cada uma quando chega na aba (o que já ficou pronto
+# aparece enquanto o resto é gerado); o PDF e o pacote usam todas.
+ETAPAS_FIGURAS = {"resumo": _figuras_resumo, "cenario": _figuras_cenario, "graficos": _figuras_graficos,
+                  "mapas": _figuras_mapas, "anomalias": _figuras_anomalias}
+
+
+def figuras_da_etapa(etapa: str, diag, est: EstatisticasMunicipio, nowcast=None,
+                     dias_mapa: int = DIAS_MAPA_RELATORIO) -> dict:
+    return ETAPAS_FIGURAS[etapa](diag, est, nowcast, dias_mapa)
+
+
+def figuras_territorio(diag, est: EstatisticasMunicipio, nowcast=None, dias_mapa: int = DIAS_MAPA_RELATORIO) -> dict:
+    """Todas as figuras do diagnóstico (as do cenário atual só com ``nowcast``)."""
+    figuras = {}
+    for etapa in ETAPAS_FIGURAS:
+        figuras.update(figuras_da_etapa(etapa, diag, est, nowcast, dias_mapa))
     return figuras
 
 
@@ -263,14 +295,23 @@ def arquivos_risco(diag, alvo: str) -> dict[str, bytes]:
     return arquivos
 
 
-def pacote(diag, figuras: dict, est: EstatisticasMunicipio, nowcast=None) -> Pacote:
-    """Pacote completo do diagnóstico (município, UC ou TI); ``figuras`` = ``figuras_territorio``."""
+def pacote(diag, figuras: dict, est: EstatisticasMunicipio, nowcast=None, vulnerabilidade: dict | None = None) -> Pacote:
+    """Pacote completo do diagnóstico (município, UC ou TI); ``figuras`` = ``figuras_territorio``.
+
+    Dois PDFs (pedido de 27/11/2026): o resumido e o completo. ``vulnerabilidade`` = argumentos de
+    ``relatorio_vulnerabilidade.historia_vulnerabilidade`` (análise, município, estado, polígono, dados ao vivo,
+    último dia, fundo): o boletim vai anexado ao completo e também solto em ``vulnerabilidade/``, com os GeoJSON,
+    a planilha e as imagens dele."""
     municipio = isinstance(diag, DiagnosticoMunicipio)
     tipo = TIPO_MUNICIPIO if municipio else diag.tipo
     sigla = SIGLA_TIPO[tipo]
     alvo = nome_arquivo(diag.municipio)
     periodo = f"{diag.ano_inicio}_{diag.ano_fim}"
-    pdf = gerar_pdf(diag, figuras, est, nowcast)
+    anexo, arquivos_vul = None, {}
+    if vulnerabilidade is not None:
+        anexo, arquivos_vul = _vulnerabilidade(vulnerabilidade)
+    pdf = gerar_pdf(diag, figuras, est, nowcast, anexo=anexo)
+    pdf_resumido = gerar_pdf(diag, figuras, est, nowcast, resumido=True)
     extras = ({"uf": diag.sigla_uf, "tipo_regiao": diag.tipo_regiao, "regiao": diag.regiao} if municipio
               else {"uf_predominante": diag.sigla_uf})
     if nowcast is not None:
@@ -279,8 +320,11 @@ def pacote(diag, figuras: dict, est: EstatisticasMunicipio, nowcast=None) -> Pac
     grades = {TAMANHO_CELULA_KM: grade_qgis(diag.focos, diag.poligono, TAMANHO_CELULA_KM)}
     proporcional = grade_qgis(diag.focos, diag.poligono)
     grades.setdefault(proporcional.get("tamanho_celula_km", TAMANHO_CELULA_KM), proporcional)
+    nome_pdf = f"relatorio_diagnostico_{alvo}_{periodo}.pdf"
+    nome_resumido = f"relatorio_resumido_{alvo}_{periodo}.pdf"
     arquivos = {
-        f"relatorio_diagnostico_{alvo}_{periodo}.pdf": pdf,
+        nome_pdf: pdf,
+        nome_resumido: pdf_resumido,
         f"estatisticas_{alvo}_{periodo}.xlsx": planilha_estatisticas(diag, est, nowcast),
         f"dados_{sigla}_{alvo}.csv": diag.focos.to_csv(index=False).encode("utf-8"),
         "metadados.json": metadados(diag.municipio, tipo, diag.ano_inicio, diag.ano_fim, len(diag.focos), extras),
@@ -299,4 +343,18 @@ def pacote(diag, figuras: dict, est: EstatisticasMunicipio, nowcast=None) -> Pac
         for nome, tabela in tabelas_nowcast(nowcast).items():
             arquivos[f"nowcast/{nome}.csv"] = tabela.to_csv(index=False).encode("utf-8")
     arquivos.update(arquivos_risco(diag, alvo))
-    return Pacote(f"Diagnostico_{sigla}_{alvo}_{periodo}.zip", _montar_zip(arquivos), pdf)
+    arquivos.update(arquivos_vul)
+    return Pacote(f"Diagnostico_{sigla}_{alvo}_{periodo}.zip", _montar_zip(arquivos), pdf, pdf_resumido, nome_pdf,
+                  nome_resumido)
+
+
+def _vulnerabilidade(argumentos: dict) -> tuple[list, dict]:
+    """(anexo do PDF completo, arquivos em ``vulnerabilidade/``) do boletim das localidades sob risco."""
+    import zipfile as _zip
+
+    from core.relatorio_vulnerabilidade import gerar_pdf_vulnerabilidade, historia_vulnerabilidade, pacote_vulnerabilidade
+    anexo, figuras = historia_vulnerabilidade(**argumentos, anexo=True)
+    pdf, nome, figuras = gerar_pdf_vulnerabilidade(**argumentos, figuras=figuras)
+    conteudo, _ = pacote_vulnerabilidade(pdf, nome, argumentos["analise"], figuras)     # fecha as figuras
+    with _zip.ZipFile(io.BytesIO(conteudo)) as z:
+        return anexo, {f"vulnerabilidade/{n}": z.read(n) for n in z.namelist()}

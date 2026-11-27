@@ -475,7 +475,7 @@ class AtualizadorFocos:
         self._pedido = threading.Event()
         self._thread = None
         self.estado = {"em_execucao": False, "etapa": "", "inicio": None, "proxima": None, "gatilho": None,
-                       "ultimo_resultado": None, "ultimo_fim": None}
+                       "ultimo_resultado": None, "ultimo_fim": None, "vento": None}
 
     @property
     def nowcast(self) -> bool:
@@ -491,6 +491,27 @@ class AtualizadorFocos:
                 resultado = self.estado["ultimo_resultado"]
                 if resultado is None or resultado.situacao in ("atualizada", "em_dia"):
                     self.estado["proxima"] = None
+
+    def definir_vento(self, ligado: bool, estado: str | None):
+        """Chave do vento (P40): ligada = busca agora (junto com a do INPE) e em cada coleta do nowcast."""
+        from core.vento import gravar_chave_vento
+        gravar_chave_vento(ligado, estado, self.bases_dir)
+        if ligado:
+            self.solicitar("vento")
+
+    def _coletar_vento(self):
+        from core.config import DADOS_AO_VIVO
+        from core.vento import chave_vento, coletar_vento
+        chave = chave_vento(self.bases_dir)
+        if not (chave["ligado"] and chave["estado"] and DADOS_AO_VIVO):
+            return
+        self._progresso(f"Buscando o vento de {chave['estado']} (Open-Meteo)")
+        try:
+            frase = coletar_vento(chave["estado"], self.bases_dir)
+        except Exception as erro:            # a thread nunca pode morrer
+            frase = f"Vento: erro inesperado ({erro})"
+        with self._trava:
+            self.estado["vento"] = frase
 
     def iniciar(self, buscar_ao_abrir: bool = True):
         with self._trava:
@@ -523,6 +544,7 @@ class AtualizadorFocos:
             resultado = self._atualizar_fn(self.bases_dir, progresso=self._progresso)
         except Exception as erro:            # a thread nunca pode morrer
             resultado = ResultadoAtualizacao("erro", f"Erro inesperado na atualização: {erro}")
+        self._coletar_vento()
         agora = self._agora()
         with self._trava:
             self.estado.update(em_execucao=False, etapa="", gatilho=None, ultimo_resultado=resultado,

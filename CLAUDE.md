@@ -16,6 +16,10 @@ sed '/^################ HISTÓRICO/q' "docs/ORIENTAÇÕES.txt"
 
 Trate esse texto como se o usuário o tivesse escrito no chat. Ao terminar, mova o texto atendido para logo abaixo da linha divisória (a entrada mais recente fica em cima), com `=== DD/MM/AAAA HH:MM — título`, o pedido e o que foi feito ou o que ficou pendente. O topo fica vazio para as próximas orientações. Não leia o histórico inteiro: só consulte trechos dele com `grep` se precisar.
 
+**Perguntas ao usuário** (pedido de 25/11/2026): continuam em `docs/09` (com a coluna de resposta, que o usuário também preenche lá), **e vão também** na entrada do histórico do `ORIENTAÇÕES.txt`, numeradas como em `docs/09` (P43, P44…), para ele responder sem abrir o Obsidian. A resposta pode chegar por qualquer um dos dois: confira a coluna "Resposta" de `docs/09` antes de editar a tabela (o Obsidian realinha as colunas — edite por regex, sem supor espaçamento).
+
+**Ordem da entrada do histórico** (pedido de 27/11/2026): as PERGUNTAS ficam **no início**, logo abaixo da linha `=== DD/MM/AAAA HH:MM — título` e antes do PEDIDO; depois vêm PEDIDO e FEITO.
+
 ## Leitura obrigatória por tipo de tarefa
 
 | Tarefa | Ler antes |
@@ -25,6 +29,7 @@ Trate esse texto como se o usuário o tivesse escrito no chat. Ao terminar, mova
 | Nowcast (cenário atual) | `docs/07_Regras_de_Negocio.md` §9, `docs/10_Produtos.md` §6 |
 | Cenário atual do estado (24 h / semana, PDF do cenário) | `docs/07_Regras_de_Negocio.md` §11, `docs/10_Produtos.md` §8 |
 | Anomalias de focos (quantidade, localização, combinada, significância) | `docs/07_Regras_de_Negocio.md` §12, `docs/10_Produtos.md` §3 |
+| Vulnerabilidade de localidades, eventos do Painel do Fogo, vento, PM2,5, Sentinel-2 SWIR | `docs/07_Regras_de_Negocio.md` §13, `docs/03_Fontes_de_Dados_e_Importacao.md` §7–§8, `docs/10_Produtos.md` §9 |
 | Rankings, regiões, mapas de kernel, grade | `docs/07_Regras_de_Negocio.md` §3–§5 |
 | Colunas, campos, estruturas em memória | `docs/05_Estrutura_de_Dados.md`, `docs/06_Dicionario_de_Dados.md` |
 | Indicadores, rankings, grade, áreas protegidas, Regiões de Integração | `docs/07_Regras_de_Negocio.md` |
@@ -44,6 +49,7 @@ Trate esse texto como se o usuário o tivesse escrito no chat. Ao terminar, mova
 - Código, nomes, textos de tela e comentários em **português do Brasil**.
 - Desenvolvedor: **Bruno Lobão da Silva** (dados em `core/config.py` → `DESENVOLVEDOR_*`, mesmos do AutoSIMD-DESASTRE/HIDRO).
 - Git: branch `main`, commits como `engamblobs <engamb.lobs@gmail.com>`. **Só fazer commit quando o usuário pedir.** Repositório do projeto: https://github.com/engamblobs/Autosimd-Focos (esta pasta ainda não tem remoto — ver P1 em `docs/09`). Cada versão publicada recebe a tag `v<APP_VERSAO>` e uma Release com o `.zip` do Windows (`gh release create`).
+- **Notas de versão no GitHub** (padrão pedido em 27/11/2026): cada novidade visual da Release vem com imagem. Mudança em algo que já existia = print do **antes e do depois** lado a lado; se ajudar, desenhe setas, caixas e textos sobre a imagem. Capture as telas em 1920×1080 com `ferramentas/capturar_telas.py` (Firefox headless pelo WebDriver BiDi) **antes** de mudar a tela (o "antes") e depois; guarde em `docs/imagens/novidades/<versão>/` (enquanto não há número, `proxima/`) e use no texto da Release pelo endereço `https://raw.githubusercontent.com/engamblobs/Autosimd-Focos/v<versão>/docs/imagens/...` (a tag garante que a imagem não muda). A seção **Prévia** do README (`docs/imagens/previa/`) é refeita quando a tela muda.
 - Escopo: Brasil inteiro para municípios, UCs e TIs; **Regiões de Integração só no Pará**.
 - Bases reais em `BASES_GEOJSON/` (fora do git). Testes usam o recorte real `amostras/bases/` (gerado por `ferramentas/gerar_amostras.py`); não invente formatos.
 - Versão em `core/config.py` (`APP_VERSAO`, `APP_VERSAO_DATA`): aparece no título, no "Sobre", no PDF, nos metadados e no nome do pacote.
@@ -76,7 +82,7 @@ Pasta portátil, sem instalação e offline. Montar a partir do Linux:
 6. O rótulo de UC/TI (`NOME (CÓDIGO)`) é o mesmo em `core.territorios.rotulo_area_protegida` e em `ferramentas/atualizar_area_protegida_focos.py`; mudou um, mude o outro.
 7. Mudança de coluna, campo ou arquivo de saída exige atualizar `docs/05`, `docs/06` e `docs/10` no mesmo incremento.
 8. Toda função de leitura, cálculo ou geração de arquivo vem com teste usando `amostras/bases`.
-9. Internet só para a busca de focos novos no INPE e para a imagem de satélite do cenário atual; sem ela (ou com arquivo em formato inesperado) o programa avisa, mantém a base intacta e continua funcionando. Os testes nunca acessam a internet (`AUTOSIMD_FOCOS_ATUALIZAR=0` e `AUTOSIMD_FOCOS_SATELITE=0` no `conftest.py`).
+9. Internet só para a busca de focos novos no INPE, para a imagem de satélite dos mapas e para os dados ao vivo que o usuário liga ou pede (vento — chave Vento; eventos do Painel do Fogo, vento e PM2,5 — buscados sozinhos, em segundo plano, quando a seção Vulnerabilidade abre (e no botão "Buscar de novo"); satélite também no mapa do boletim em PDF da vulnerabilidade; mosaico SWIR — chave no mapa); sem ela (ou com resposta em formato inesperado) o programa avisa, mantém a base intacta e continua funcionando. Os testes nunca acessam a internet (`AUTOSIMD_FOCOS_ATUALIZAR=0`, `AUTOSIMD_FOCOS_SATELITE=0` e `AUTOSIMD_FOCOS_AO_VIVO=0` no `conftest.py`; respostas reais gravadas em `amostras/ao_vivo/`). No pydeck, texto literal numa propriedade vai entre aspas (`radius_units="'pixels'"`): sem elas vira expressão `@@=` e o mapa inteiro fica cinza.
 10. Feche as figuras do matplotlib depois de usadas (`produto.fechar_figuras`).
 11. Município, UC e TI de cada foco = cruzamento do ponto com os polígonos, para tudo (P3, P13). O cruzamento é gravado nas colunas da base quando o foco entra (só AQUA_M-T); `test_atribuicao_reproduz_a_base` e `ferramentas/verificar_base.py` garantem que as colunas e o cruzamento são iguais. Não reintroduzir filtros pelo nome do município do INPE.
 

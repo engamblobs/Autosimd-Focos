@@ -32,6 +32,19 @@ O estado é escolhido pelo nome do arquivo de limites (`NM_UF_Pará.geojson` →
 | `ultima_busca` | Data/hora (UTC) da última consulta ao servidor — decide a busca automática do dia |
 | `historico` | Até 50 registros: `em`, `arquivos`, `dias`, `de`, `ate`, `focos_novos`, `total` |
 
+### 1.2 Vento — `vento.parquet` e `vento.json` (P40)
+
+`vento.json`: `{"ligado": bool, "estado": "Pará"}` (chave Vento; ausente = desligada). `vento.parquet` (gravado por `core/vento.py`, 30 dias):
+
+| Coluna | Tipo | Conteúdo |
+|---|---|---|
+| `sigla_uf` | texto | UF da coleta |
+| `lon`, `lat` | float | centro da quadrícula de 0,25° |
+| `hora` | datetime (UTC, sem fuso) | hora da previsão |
+| `velocidade_kmh`, `rajada_kmh` | float | vento e rajada a 10 m |
+| `direcao_graus` | float | de onde o vento vem (0 = norte, sentido horário) |
+| `coletado_em` | datetime (UTC) | quando foi buscado; a coleta mais nova substitui a mesma quadrícula e hora |
+
 ## 2. Limites
 
 | Base | Campos usados |
@@ -70,3 +83,27 @@ UTF-8, `;`: `ibge; nome_oficial; variacoes; regiao_integracao; regiao_geografica
 | `metadados.json` | `nome_alvo`, `tipo_analise`, `ano_inicio`, `ano_fim`, `total_focos`, `gerado_por`; município: `uf`, `tipo_regiao`, `regiao`, `nowcast_ate`; UC/TI: `uf_predominante` |
 | `grade_…km_<alvo>.geojson` (`descricao`, `tamanho_celula_km`) | Observação do tamanho e do ajuste da grade à latitude (P8); tamanho da célula em km |
 | `risco_de_recorrencia/risco_<n>_<classe>_<alvo>.kml` | 4 arquivos (1 baixo, 2 moderado, 3 alto, 4 muito alto). Mais `risco_recorrencia_classes_<alvo>.geojson`: as classes com células numa FeatureCollection (`ordem`, `classe`, `rotulo`, `cor_hex`, `anos_min`, `anos_max`, `celulas`, `area_km2`, `q1`, `q2`, `q3`). Cada KML: `Document` com nome, descrição (território, período, nº de células, recorrência em anos, área, quartis Q1–Q3, nota da grade), estilo na cor da classe e **um** `Placemark` com a `MultiGeometry` das células da classe dissolvidas (nenhum se a classe ficou vazia). WGS 84 |
+
+## 9. Localidades — `localidades/localidades_ibge_2022.parquet` e `localidades/territorios_quilombolas_2022.parquet`
+
+Geradas por `ferramentas/importar_localidades.py` a partir dos KML do IBGE (`docs/03` §7). Base ausente = `BaseLocalidadesAusente` com o comando que a gera.
+
+| Coluna | Tipo | Conteúdo |
+|---|---|---|
+| `cd_localidade` | texto | código IBGE da localidade (único; a sede municipal usa o código do município) |
+| `nome` | texto | nome da localidade |
+| `categoria` | categoria | Cidade, Vila, Núcleo Urbano, Povoado, Núcleo Rural, Lugarejo, Outras Localidades, Localidade Indígena, Localidade Quilombola, Agrovila do PA, Regiões Administrativas do Distrito Federal, Distrito Estadual de Fernando de Noronha |
+| `indigena`, `quilombola`, `agrovila_pa` | bool | a localidade também está na pasta indígena / quilombola / agrovila de assentamento do KML |
+| `cd_mun` | int32 | código IBGE do município |
+| `municipio` | categoria | nome do município (grafia do IBGE, a mesma de `NM_MUN` dos limites) |
+| `sigla_uf` | categoria | UF |
+| `lon`, `lat` | float | ponto do KML (WGS 84) |
+
+Territórios quilombolas: `codigo` (int, `COD_TQ` do IBGE), `nome` (`NOM_TQ`), `geometria` (WKB; `carregar_territorios_quilombolas` devolve objetos shapely).
+
+
+### 9.1 Localidades analisadas (`vulnerabilidade.analisar` → `AnaliseVulnerabilidade.localidades`)
+
+Além das colunas da base: `ponto` (posição original, a do PM2,5 hora a hora), `dist_sede_km`, `recorrencia` (fração dos anos com foco a 5 km), `vulnerabilidade` (1–3), `criterios` (soma bruta tipo + isolada + recorrente, pode passar de 3 — só descreve, P46), `perfil` (texto: indígena/quilombola, comunidade rural ou área urbana · isolada · fogo recorrente), `foco_24h_km`, `foco_7d_km`, `focos_7d_10km`, `evento_fogo`, `eta_fogo_h`, `evento_fumaca`, `eta_fumaca_h`, `pm25_max` (µg/m³, máximo das próximas 24 h), `qualidade_ar` (Boa, Moderada, Ruim, Muito ruim, Péssima — IQAR da CONAMA 491/2018, P45), `exposicao` (0–3), `motivo` (critério que deu a nota de exposição, com distância, horas ou PM2,5), `risco` = exposição × vulnerabilidade, `classe`.
+
+Busca ao vivo (`buscar_dados_ao_vivo`): `eventos`, `vento_eventos`, `pm25`, `passagens` (indicadores por passagem, para o gráfico de severidade do boletim), `avisos`, `tempos`, `buscado_em`.

@@ -35,11 +35,24 @@ Cada incremento é um pedido separado ao Claude. Só avançar quando o anterior 
 | 18 | Rodada 8 | Grupos de células significativas contornados, pontos com a cor da célula e bordas verdes; grade de 10 km nas anomalias do cenário; anomalias na tela; recorde do ano de referência na tabela mês a mês; tabela com todos os municípios; municípios acima da máxima no mês, texto do cenário, sazonalidades e pacote completo do cenário | ✔ 2026-10-29 |
 | 19 | Interface nova (v0.14) | Tema próprio (cores e fontes Fira, offline), Panorama e Diagnóstico em abas, boletim do cenário, legenda do mapa com as cores reais, relatório/GeoJSON/pacote no painel esquerdo, bloco "⋯" da base INPE no rodapé (abre na atualização e recolhe), sem círculo de significância dentro dos grupos | ✔ 2026-11-23 |
 
+| 26 | Dashboard do Panorama e downloads em três botões (v0.15) | Panorama do Estado em painel único (§11 de `docs/10`); PDF resumido (4 mapas numa página) e completo (com o boletim da vulnerabilidade anexado); caixa de downloads no dashboard; boletim sem a tabela dos eventos | ✔ 2026-11-27 |
+| 25 | Boletim da vulnerabilidade, título com caixas de seleção e painel recolhido refeito | PDF e pacote só da vulnerabilidade (P47, `docs/10` §9.1); PM2,5 pelo IQAR da CONAMA 491/2018 (P45); colunas Motivo e Perfil (P46); painel recolhido = coluna de botões-ícone; título do dashboard = caixas de seleção de estado e município; seção Prévia no README com capturas (`ferramentas/capturar_telas.py`) | ✔ 2026-11-27 |
+| 24 | Calibração do protótipo de vulnerabilidade (P43–P46) | Distâncias e cones mantidos (P43, P44), PM2,5 pela CONAMA (P45), escala mantida com descrições novas (P46) | ✔ 2026-11-27 |
+| 23 | Visualização dashboard (TV) do diagnóstico de município | Botão dashboard/legado; painel esquerdo recolhido só com ícones; layout do modelo do usuário (localização + título, sazonalidade, estatísticas interativas, comparativo; resumo, cartões de mapa com ⇄, vulnerabilidade, localidades); busca ao vivo automática em segundo plano com porcentagem sobre o mapa; logo no rodapé leva à página inicial | ✔ 2026-11-27 |
+| 22 | Desempenho e leitura da vulnerabilidade | Diagnóstico em etapas por aba com cache na sessão (abas em ~6 s; antes, até ~60 s quando o servidor de satélite demorava), satélite desiste rápido; busca ao vivo em paralelo (8,7 s → 3 s), frente de fogo de 24 h como origem dos cones e ponto do vento, PM2,5 por célula de 0,1°; casinhas para as localidades, focos de calor no mapa, setas de vento agrupadas, cones dissolvidos por sobreposição + GeoJSON, camadas com liga/desliga e opacidade, dois cliques na tabela centralizam o mapa; botão "Baixar pontos de focos de calor" | ✔ 2026-11-25 |
+| 21 | Vento, Sentinel-2 SWIR e vulnerabilidade (protótipo) | Chave Vento acima do Nowcast (Open-Meteo, 0,25° só onde houve foco na semana, estado em análise); camada Sentinel-2 SWIR do Painel do Fogo nos mapas interativos; aba "Vulnerabilidade (protótipo)" no diagnóstico de município: proximidade, eventos de fogo do Painel do Fogo com cones de fogo (elipse de Anderson) e fumaça, PM2,5 do CAMS, vulnerabilidade da localidade e risco | ✔ 2026-11-25 |
+| 20 | Tabelas e localidades | Dois cliques no nome de um município em qualquer tabela abrem o diagnóstico; um clique na tabela "acima da máxima" troca a sazonalidade; localidades do IBGE 2022 e territórios quilombolas em Parquet (`ferramentas/importar_localidades.py`, `core/localidades.py`) | ✔ 2026-11-25 |
+
 ## Próximos incrementos (propostos — dependem de `docs/09`)
 
 | # | Incremento | Depende de |
 |---|---|---|
-| 20 | (a definir com o usuário) | — |
+| 27 | Dashboard otimizado para televisões | leitura a distância, tudo numa tela sem rolagem, atualização automática (pedido de 27/11/2026, roadmap do README) |
+| 28 | Dashboard de UC e TI | mesmo painel único do município |
+| 29 | Interface para celular (modo mobile) | layout responsivo para uso em campo |
+| 30 | Hospedagem do site | acesso pelo navegador sem instalar; decidir servidor e acesso |
+| 31 | Publicação científica | método, validação e resultados |
+| 32 | Integração com o MapBiomas Fogo via API | áreas queimadas ao lado dos focos; ver termos e chave da API |
 
 ## Modelo de pedido ao Claude
 

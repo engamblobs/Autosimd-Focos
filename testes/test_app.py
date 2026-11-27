@@ -271,3 +271,108 @@ def test_base_regravada_nao_perde_o_clique():
     at.button(key="cenario_gerar").click().run()
     assert not at.exception and at.get("download_button")
     assert at.session_state["versao_base_vista"] != -1
+
+
+def test_vulnerabilidade_no_diagnostico(monkeypatch):
+    """P42: aba do protótipo — primeiro só com a base; depois com eventos, vento e PM2,5 (respostas gravadas)."""
+    import json as json_
+    from core import rede
+    from test_vulnerabilidade import repetidor
+    usadas = []
+    monkeypatch.setattr(rede, "obter_json", repetidor(usadas))
+    monkeypatch.setattr(config, "DADOS_AO_VIVO", True)
+    at = rodar()
+    at.sidebar.selectbox[1].set_value("SÃO FÉLIX DO XINGU").run()
+    at.sidebar.checkbox[0].uncheck().run()
+    processar(at)
+    assert "Localidades vulneráveis a fogo e fumaça — São Félix Do Xingu" in textos(at)
+    assert any("Localidades analisadas" in m.value for m in at.markdown)
+    assert any(t.label == "Vulnerabilidade (protótipo)" for t in at.tabs)
+    at.button(key="vul_buscar").click().run()
+    assert not at.exception, at.exception
+    assert "Eventos de fogo perto do município (Painel do Fogo)" in textos(at)
+    assert len(set(usadas)) == 5                                  # eventos, frentes, passagens, vento, PM2,5
+    assert any(d.proto.label.startswith("⬇️ Cones em GeoJSON") for d in at.get("download_button"))
+    # pedido de 27/11/2026: sem botão próprio do boletim; ele vai no pacote e anexado ao PDF completo
+    assert not any(b.key == "vul_gerar_pdf" for b in at.button)
+    rotulos = {d.proto.label: d for d in at.sidebar.get("download_button")}
+    assert {"📄 Diagnóstico resumido (PDF)", "📑 Diagnóstico completo (PDF)", "📦 Pacote completo (.zip)"} <= set(rotulos)
+    import io
+    import zipfile
+    pacote_ = at.session_state["figuras_cache"]["pacote"][1]
+    assert pacote_.pdf_resumido.startswith(b"%PDF")
+    assert len(pacote_.pdf) > len(pacote_.pdf_resumido)                # o completo leva o boletim anexado
+    arquivos = set(zipfile.ZipFile(io.BytesIO(pacote_.conteudo)).namelist())
+    assert pacote_.nome_pdf_resumido in arquivos and pacote_.nome_pdf in arquivos
+    assert any(n.startswith("vulnerabilidade/localidades_risco_fogo_") and n.endswith(".pdf") for n in arquivos)
+    assert "vulnerabilidade/localidades.geojson" in arquivos
+
+
+def test_modo_dashboard_do_municipio():
+    """Pedido de 27/11/2026: diagnóstico de município num painel (TV), painel esquerdo recolhido com ícones."""
+    at = rodar()
+    at.sidebar.button(key="botao_modo").click().run()
+    assert not at.exception, at.exception
+    assert at.session_state["modo_dashboard"] is True
+    # recolhido (pedido de 27/11/2026): só a coluna de botões-ícone, sem caixas nem bolinhas de seleção
+    assert [b.label for b in at.sidebar.button] == ["☰", "🏠", "🔥", "🗂️", "📄", "🚀"]
+    assert not at.sidebar.radio and not at.sidebar.selectbox and not at.sidebar.slider
+    at.sidebar.button(key="botao_lateral").click().run()             # abre o painel
+    assert any(b.label == "« Recolher o painel" for b in at.sidebar.button)
+    assert not at.sidebar.selectbox                                   # estado e município ficam no título
+    at.sidebar.button(key="botao_lateral").click().run()             # recolhe de novo
+    # título = caixas de seleção: escolher o município já processa o diagnóstico (sem baixar o pacote)
+    assert at.selectbox(key="diag_estado").value == "Pará"
+    assert at.selectbox(key="diag_municipio").value is None           # esperando a escolha
+    at.selectbox(key="diag_municipio").set_value("SÃO FÉLIX DO XINGU").run()
+    assert not at.exception, at.exception
+    assert at.session_state["analise"][2] == "SÃO FÉLIX DO XINGU"
+    caixa = {d.proto.label for d in at.get("download_button")}            # caixa de downloads (no lugar da vermelha)
+    assert {"📄 Diagnóstico resumido (PDF)", "📑 Diagnóstico completo (PDF)", "📦 Pacote completo (.zip)", "⬇️"} <= caixa
+    assert any(b.label == "⬇️" for b in at.sidebar.get("download_button"))
+    assert {m.label: m.value for m in at.metric}["Focos em 2024"] == "7.356"
+    assert "Comparativo na Região Araguaia (2024)" in textos(at)
+    assert at.button(key="botao_densidade")
+    assert any("Anomalias indisponíveis" in c.value for c in at.caption)     # amostra: só 2023–2024
+    assert not any(t.label == "Vulnerabilidade (protótipo)" for t in at.tabs)       # sem as abas do legado
+    at.button(key="botao_densidade").click().run()                   # alterna o mapa de densidade
+    assert not at.exception, at.exception
+    assert at.session_state["dash_densidade"] == 1
+    assert any("Estatísticas (modelo INPE)" in m.value for m in at.markdown)
+    at.sidebar.button(key="botao_modo").click().run()                 # volta ao legado
+    assert any(t.label == "Vulnerabilidade (protótipo)" for t in at.tabs)
+    assert at.sidebar.selectbox(key="diag_municipio").value == "SÃO FÉLIX DO XINGU"   # a escolha continua
+    at.sidebar.button(key="botao_modo").click().run()                 # dashboard de novo, recolhido
+    at.sidebar.button(key="icone_pagina_0").click().run()             # os ícones navegam
+    assert at.session_state["navegacao"] == "🏠 Panorama do Estado"
+
+
+def test_nome_proprio():
+    from core.texto import nome_proprio
+    assert nome_proprio("SÃO FÉLIX DO XINGU") == "São Félix do Xingu"
+    assert nome_proprio("DOM ELISEU") == "Dom Eliseu"
+
+
+def test_modo_dashboard_do_panorama():
+    """Pedido de 27/11/2026: Panorama do Estado em painel único, no modelo do diagnóstico de município."""
+    at = rodar(pagina=None)
+    at.sidebar.button(key="botao_modo").click().run()
+    assert not at.exception, at.exception
+    # painel recolhido: sem o 🚀 (só no diagnóstico)
+    assert [b.label for b in at.sidebar.button] == ["☰", "🏠", "🔥", "🗂️", "📄"]
+    assert at.selectbox(key="pan_estado_tv").value == "Pará"
+    assert at.selectbox(key="pan_regiao_tv").value == "Todas as regiões"
+    assert not at.tabs or not any(t.label == "Cenário atual" for t in at.tabs)       # sem as abas do legado
+    t = textos(at)
+    assert "Municípios com focos na última semana" in t and "Relatório do cenário (PDF)" in t
+    assert any("Estatísticas (modelo INPE)" in m.value for m in at.markdown)
+    at.selectbox(key="pan_regiao_tv").set_value(at.selectbox(key="pan_regiao_tv").options[1]).run()
+    assert not at.exception, at.exception
+    assert at.session_state["pan_regiao"] != "Todas as regiões"                    # o título filtra a região
+    at.sidebar.button(key="botao_modo").click().run()                             # volta ao legado, mesma região
+    assert at.selectbox(key="pan_regiao").value == at.session_state["pan_regiao"]
+
+
+def test_logo_do_rodape_volta_ao_inicio():
+    at = rodar()
+    assert any('class="logo-inicio"' in m.value for m in at.markdown)

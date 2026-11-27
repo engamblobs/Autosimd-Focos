@@ -146,3 +146,23 @@ Implementação: `core/estatisticas.py` (`estatisticas_territorio`). Modelo: htt
 | Grupos | Células significativas a **1%** do mesmo sinal a até **20 km** umas das outras (fechamento morfológico em km: expande 10 km, une, encolhe 5 km) formam um grupo de ≥ 2 células, contornado em vermelho (mais focos) ou azul (menos focos), linha de 1,1 (o limite do território é 1,5) com halo branco (`grupos_significativos`) |
 | Células vazias | Sem foco no período nem no histórico |
 | Limitação | Com poucos focos no período (ex.: Maracanã, 3 focos em out/2026) quase nenhuma célula é significativa; células com **menos** focos raramente são, porque a contagem não fica abaixo de zero |
+
+## 13. Localidades vulneráveis a fogo e fumaça — protótipo (`core/vulnerabilidade.py`, P42)
+
+Aba "Vulnerabilidade (protótipo)" do diagnóstico de município. Parâmetros no início do módulo; a calibração está em aberto (P43–P46).
+
+| Item | Regra |
+|---|---|
+| Localidades | As do IBGE 2022 no município (`core/localidades.py`) |
+| Distâncias | Plano local em km (equiretangular no centro do município) |
+| a) Proximidade | Focos da base (AQUA) até ~55 km do município: último dia a ≤ 5 km = 3; última semana a ≤ 5 km ou último dia a ≤ 10 km = 2; última semana a ≤ 20 km = 1 |
+| Evento de fogo | Do Painel do Fogo (CENSIPAM, `core/painel_do_fogo.py`): ≥ 3 focos VIIRS com buffers de 400 m que se cruzam e área ≥ 1 km²; ativo = detecção nas últimas 48 h; em observação = 2–4 dias; expansão (ha/h) = área ganha nas passagens das últimas 24 h ÷ horas |
+| b) Cone do fogo (24 h) | Elipse de Anderson (1983): LB = 0,936·e^(0,2566·U) + 0,461·e^(−0,1548·U) − 0,397, U = vento a meia-chama em mi/h (vento a 10 m × 0,4); avanço da cabeça = [√(A₁·LB/π) − √(A₀·LB/π)]·(1+e), e = √(1−1/LB²), A₁ = A₀ + expansão × 24 h; abertura = arctg(1/LB) + 10° (mín. 20°); vento < 5 km/h = círculo. Só eventos ativos. Dentro = 3 pontos, com a hora prevista de chegada (distância ÷ velocidade da cabeça) |
+| Origem dos cones e ponto do vento | **Centro da frente de fogo das últimas 24 h** do evento (camada "Frente de Fogo (24h)" do Painel do Fogo, `mv_deteccoes_classificadas` — união dos agrupamentos de focos recentes); sem frente, o evento inteiro. Distâncias medidas a partir da frente. Vento buscado só nas frentes dos eventos ativos |
+| Cones no mapa e no GeoJSON | Dissolvidos por tipo pelo **número de cones sobrepostos** em cada lugar: 1, 2, 3 ou mais eventos (faces exatas das bordas, `shapely.polygonize`) |
+| b) Cone da fumaça (6 h) | Vento médio vetorial das próximas 6 h no centro do evento; setor de ±30° para onde sopra; alcance = velocidade × 6 h (máx. 100 km). Só eventos ativos. Dentro = 2 pontos, com a hora de chegada |
+| c) PM2,5 | Consulta por célula de 0,1° com localidade (o CAMS tem ~0,4°: localidades vizinhas dividem o valor). Máximo das próximas 24 h (CAMS, Open-Meteo): > 25 µg/m³ = 1, > 50 = 2, > 75 = 3 (faixas do IQAR da CONAMA 491/2018, 24 h: moderada, ruim, muito ruim/péssima — P45); padrão final CONAMA = 25 |
+| Exposição | O maior de a, b e c (0–3) |
+| d) Vulnerabilidade | Indígena ou quilombola = 3; povoado, lugarejo, núcleo rural, agrovila, outras = 2; cidade, vila, núcleo urbano = 1; +1 se a > 30 km da sede; +1 se teve foco a ≤ 5 km em ≥ 50% dos anos do período; máximo 3 |
+| e) Risco | Exposição × vulnerabilidade: 0 sem exposição; 1–2 baixo; 3–4 moderado; 6 alto; 9 muito alto |
+| Limites | Vento de modelos globais a 10 m (~10–25 km), sem relevo nem efeito do próprio fogo; fumaça em linha reta; área do evento superestima eventos pequenos. Serve para priorizar e comparar |

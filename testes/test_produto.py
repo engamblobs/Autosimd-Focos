@@ -172,6 +172,16 @@ def test_pacote_municipio(municipio):
     assert len(ranking) == 144 and ranking["Focos de Calor"].sum() == len(diag.focos_estado)
 
 
+def test_pdf_resumido(municipio):
+    """Pedido de 27/11/2026: um mapa de cada tipo (4 numa página), sem tabelas comparativas e notas."""
+    pacote_ = municipio[2]
+    resumido = pacote_.pdf_resumido
+    assert resumido.startswith(b"%PDF") and pacote_.nome_pdf_resumido == "relatorio_resumido_NOVO_PROGRESSO_2023_2024.pdf"
+    assert pacote_.nome_pdf_resumido in conteudo(pacote_).namelist()
+    paginas = lambda pdf: int(re.search(rb"/Count (\d+)", pdf).group(1))     # noqa: E731
+    assert paginas(resumido) < paginas(pacote_.pdf)
+
+
 def test_pdf_do_municipio(municipio):
     pdf = municipio[2].pdf
     assert pdf.startswith(b"%PDF")

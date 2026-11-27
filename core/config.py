@@ -5,8 +5,8 @@ import os
 from pathlib import Path
 
 APP_NOME = "AutoSIMD-FOCOS"
-APP_VERSAO = "0.14"
-APP_VERSAO_DATA = "23/11/2026"
+APP_VERSAO = "0.15"
+APP_VERSAO_DATA = "27/11/2026"
 REPOSITORIO = "https://github.com/engamblobs/Autosimd-Focos"
 
 # Faixa de portas própria (8501 é o padrão do Streamlit; o AutoSIMD-DESASTRE usa 8571–8620)
@@ -45,6 +45,7 @@ NOME_FOCOS_PARQUET = "bdqueimadas_consolidado.parquet"
 NOME_MUNICIPIOS_DIR = "mun-brGEOJSON"          # um NM_UF_<Estado>.geojson por estado
 NOME_UC_GEOJSON = "ucGEOJSON/UC-BR.geojson"    # CNUC/MMA, todo o Brasil
 NOME_TI_GEOJSON = "tiGEOJSON/TI-BR.geojson"    # FUNAI, todo o Brasil
+NOME_LOCALIDADES_DIR = "localidades"          # IBGE 2022: localidades e territórios quilombolas (Parquet)
 
 
 def caminho_focos(bases_dir: Path | None = None) -> Path:
@@ -63,6 +64,10 @@ def caminho_ti(bases_dir: Path | None = None) -> Path:
     return Path(bases_dir or BASES_DIR) / NOME_TI_GEOJSON
 
 
+def pasta_localidades(bases_dir: Path | None = None) -> Path:
+    return Path(bases_dir or BASES_DIR) / NOME_LOCALIDADES_DIR
+
+
 # Busca automática dos focos novos no INPE sempre que o programa é aberto (docs/03 §5); 0 desliga (testes)
 ATUALIZACAO_AUTOMATICA = os.environ.get("AUTOSIMD_FOCOS_ATUALIZAR", "1") != "0"
 # Imagem de satélite de fundo no mapa do cenário atual; 0 desliga (testes, sem internet)
@@ -72,6 +77,19 @@ FUNDO_SATELITE = os.environ.get("AUTOSIMD_FOCOS_SATELITE", "1") != "0"
 URL_SATELITE = "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg"
 CREDITO_SATELITE = ("Imagem: Sentinel-2 cloudless 2024 (s2maps.eu) por EOX IT Services GmbH, CC BY-NC-SA 4.0 — "
                     "contém dados Copernicus Sentinel modificados (2024)")
+
+# Dados ao vivo da seção de vulnerabilidade, do vento e da camada Sentinel-2 (P40–P42); 0 desliga (testes)
+DADOS_AO_VIVO = os.environ.get("AUTOSIMD_FOCOS_AO_VIVO", "1") != "0"
+# Painel do Fogo (CENSIPAM): serviços públicos, sem chave. Eventos de fogo (WFS) e mosaico Sentinel-2 SWIR (WMS)
+URL_PAINEL_DO_FOGO_WFS = "https://panorama.sipam.gov.br/geoserver/painel_do_fogo/wfs"
+URL_SENTINEL_SWIR = ("https://panorama.sipam.gov.br/geoserver/painel_do_fogo/wms?service=WMS&version=1.1.1"
+                     "&request=GetMap&layers=painel_do_fogo:sentinel_swir&styles=&srs=EPSG:3857"
+                     "&bbox={bbox-epsg-3857}&width=256&height=256&format=image/png&transparent=true")
+CREDITO_SENTINEL_SWIR = "Sentinel-2 em realce SWIR (fogo ativo): Painel do Fogo — CENSIPAM"
+# Open-Meteo (gratuito, sem chave, CC BY 4.0): vento a 10 m (modelos globais) e PM2,5 (CAMS)
+URL_OPEN_METEO = "https://api.open-meteo.com/v1/forecast"
+URL_OPEN_METEO_AR = "https://air-quality-api.open-meteo.com/v1/air-quality"
+CREDITO_OPEN_METEO = "Vento e PM2,5: Open-Meteo.com (CC BY 4.0), modelos globais e CAMS/Copernicus"
 
 # Densidade de kernel dos mapas (P21) — para ajustar, mude aqui
 KERNEL_DESVIO_KM = 5.0           # desvio padrão do kernel gaussiano

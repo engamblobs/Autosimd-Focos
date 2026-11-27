@@ -218,8 +218,9 @@ def resumo_executivo(diag, est: dict) -> list:
             Spacer(1, 10)]
 
 
-def nowcast_pdf(nowcast, figuras: dict, est: dict) -> list:
-    """Cenário atual (P18): indicadores, gráfico dos últimos 30 dias e mapa dos focos recentes."""
+def nowcast_pdf(nowcast, figuras: dict, est: dict, resumido: bool = False) -> list:
+    """Cenário atual (P18): indicadores, gráfico dos últimos 30 dias e mapa dos focos recentes. ``resumido`` = só
+    os indicadores (o mapa vai para a página dos mapas e o gráfico semanal para a sazonalidade)."""
     i, dia = nowcast.indicadores, nowcast.ultimo_dia
 
     def com_media(valor, media):
@@ -236,6 +237,8 @@ def nowcast_pdf(nowcast, figuras: dict, est: dict) -> list:
     ]
     elementos = [Paragraph(f"Cenário Atual — Nowcast Diário (dados até {dia:%d/%m/%Y})", est["secao"]),
                  _tabela_indicadores(pares, est), Spacer(1, 6)]
+    if resumido:
+        return elementos + [Spacer(1, 4)]
     if figuras.get("nowcast_diario") is not None:
         elementos += [imagem_figura(figuras["nowcast_diario"], LARGURA_UTIL), Spacer(1, 4)]
     if figuras.get("nowcast_semanal") is not None:
@@ -248,8 +251,10 @@ def nowcast_pdf(nowcast, figuras: dict, est: dict) -> list:
     return elementos
 
 
-def graficos_pdf(figuras: dict, est: dict) -> list:
-    elementos = [Paragraph("Diagnóstico Geral e Análise de Sazonalidade", est["secao"])]
+def graficos_pdf(figuras: dict, est: dict, semanal: bool = False) -> list:
+    """``semanal`` = com o gráfico dos focos por semana no último trimestre (PDF resumido)."""
+    elementos = [PageBreak(), Paragraph("Diagnóstico Geral e Análise de Sazonalidade", est["secao"])] if semanal else \
+        [Paragraph("Diagnóstico Geral e Análise de Sazonalidade", est["secao"])]
     if figuras.get("top_estado") is not None:
         lado_a_lado = Table([[imagem_figura(figuras["top_estado"], 255), imagem_figura(figuras["evolucao"], 255)]],
                             colWidths=[265, 265])
@@ -258,8 +263,35 @@ def graficos_pdf(figuras: dict, est: dict) -> list:
         elementos.append(lado_a_lado)
     else:
         elementos.append(imagem_figura(figuras["evolucao"], 300))
-    elementos += [Spacer(1, 6), imagem_figura(figuras["sazonalidade"], 520), Spacer(1, 10), PageBreak()]
-    return elementos
+    elementos += [Spacer(1, 6), imagem_figura(figuras["sazonalidade"], 520), Spacer(1, 10)]
+    if semanal and figuras.get("nowcast_semanal") is not None:
+        elementos += [imagem_figura(figuras["nowcast_semanal"], LARGURA_UTIL), Spacer(1, 6)]
+    return elementos + [PageBreak()]
+
+
+# PDF resumido (pedido de 27/11/2026): um mapa de cada tipo, os quatro numa página
+MAPAS_RESUMIDO = (("mapa_densidade", "Densidade acumulada"), ("nowcast_mapa", "Focos nos últimos 7 dias"),
+                  ("mapa_recorrencia", "Recorrência"), ("anomalia_quantidade", "Anomalia (quantidade)"))
+
+
+def _imagem_caixa(fig, largura: float, altura: float):
+    imagem = imagem_figura(fig, largura)
+    if imagem.drawHeight > altura:
+        escala = altura / imagem.drawHeight
+        imagem.drawWidth, imagem.drawHeight = imagem.drawWidth * escala, altura
+    return imagem
+
+
+def mapas_resumido_pdf(figuras: dict, est: dict) -> list:
+    """Os quatro mapas numa página (2 × 2), sem os textos de metodologia."""
+    celulas = [_imagem_caixa(figuras[c], 262, 330) for c, _ in MAPAS_RESUMIDO if figuras.get(c) is not None]
+    if not celulas:
+        return []
+    celulas += [""] * (-len(celulas) % 2)
+    grade = Table([celulas[i:i + 2] for i in range(0, len(celulas), 2)], colWidths=[267, 267])
+    grade.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                               ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4)]))
+    return [Paragraph("Mapeamento Espacial de Focos de Calor", est["secao"]), grade]      # as estatísticas abrem página
 
 
 def mapas_pdf(figuras: dict, est: dict) -> list:
@@ -430,26 +462,45 @@ def tabelas_e_notas(diag, est: dict) -> list:
 TITULOS_PDF = {TIPO_UC: "DIAGNÓSTICO DE UNIDADE DE CONSERVAÇÃO", TIPO_TI: "DIAGNÓSTICO DE TERRA INDÍGENA"}
 
 
-def gerar_pdf(diag, figuras: dict, est: EstatisticasMunicipio | None = None, nowcast=None) -> bytes:
-    """PDF completo do diagnóstico (município, UC ou TI); ``figuras`` = ``produto.figuras_territorio``."""
+def gerar_pdf(diag, figuras: dict, est: EstatisticasMunicipio | None = None, nowcast=None, resumido: bool = False,
+              anexo: list | None = None) -> bytes:
+    """PDF do diagnóstico (município, UC ou TI); ``figuras`` = ``produto.figuras_territorio``.
+
+    ``resumido`` (pedido de 27/11/2026): resumo, indicadores do cenário atual, gráficos com o semanal do último
+    trimestre, os quatro mapas numa página (densidade acumulada, últimos 7 dias, recorrência, anomalia) e as
+    estatísticas — sem o gráfico dos 30 dias, sem os outros mapas, sem a metodologia das anomalias e sem as
+    tabelas comparativas e notas. ``anexo`` = blocos acrescentados no fim (boletim da vulnerabilidade no
+    completo)."""
     buffer = io.BytesIO()
     nome = diag.nome
     doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=MARGEM, rightMargin=MARGEM, topMargin=MARGEM,
                             bottomMargin=45, title=f"{APP_NOME} — Diagnóstico {nome}", author=APP_NOME)
     estilos = estilos_pdf()
     titulo = "DIAGNÓSTICO MUNICIPAL" if isinstance(diag, DiagnosticoMunicipio) else TITULOS_PDF[diag.tipo]
+    if resumido:
+        titulo += " — RESUMO"
     historia = cabecalho_pdf(f"{APP_NOME} — {titulo}", f"{diag.municipio} ({diag.ano_inicio} - {diag.ano_fim})",
                              estilos)
     historia += resumo_executivo(diag, estilos)
     if figuras.get("localizacao") is not None:
         historia += [imagem_figura(figuras["localizacao"], 470), Spacer(1, 8)]
-    if nowcast is not None:
-        historia += nowcast_pdf(nowcast, figuras, estilos)
-    historia += graficos_pdf(figuras, estilos)
-    historia += mapas_pdf(figuras, estilos)
-    historia += anomalias_pdf(figuras, estilos)
-    if est is not None:
-        historia += estatisticas_pdf(est, figuras, estilos) + [PageBreak()]
-    historia += tabelas_e_notas(diag, estilos)
+    if resumido:
+        if nowcast is not None:
+            historia += nowcast_pdf(nowcast, figuras, estilos, resumido=True)
+        historia += graficos_pdf(figuras, estilos, semanal=True)
+        historia += mapas_resumido_pdf(figuras, estilos)
+        if est is not None:
+            historia += estatisticas_pdf(est, figuras, estilos)
+    else:
+        if nowcast is not None:
+            historia += nowcast_pdf(nowcast, figuras, estilos)
+        historia += graficos_pdf(figuras, estilos)
+        historia += mapas_pdf(figuras, estilos)
+        historia += anomalias_pdf(figuras, estilos)
+        if est is not None:
+            historia += estatisticas_pdf(est, figuras, estilos) + [PageBreak()]
+        historia += tabelas_e_notas(diag, estilos)
+    if anexo:
+        historia += [PageBreak(), *anexo]
     doc.build(historia, canvasmaker=CanvasNumerado)
     return buffer.getvalue()

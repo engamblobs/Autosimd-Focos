@@ -9,6 +9,7 @@ O AutoSIMD-FOCOS **não tem banco de dados próprio**: lê as bases de `BASES_GE
 | Focos de calor | Parquet (10 colunas, `docs/06` §1) | `focos.carregar_focos` | DataFrame único, compartilhado entre as sessões (`st.cache_resource`) |
 | Municípios | GeoJSON por UF (`NM_MUN`) | `territorios.municipios_do_estado` | Dicionário nome → geometria, por arquivo (até 4 estados) |
 | UCs e TIs | GeoJSON nacional | `territorios.carregar_areas_protegidas` | Lista `{tipo, nome, geom}`, sem feições repetidas |
+| Localidades do IBGE e territórios quilombolas | Parquet (`docs/06` §9) | `localidades.carregar_localidades`, `localidades.carregar_territorios_quilombolas` | Lidas sob demanda (ainda sem tela) |
 | Regiões de Integração | CSV (`referencia/municipios_pa.csv`) | `regioes.carregar_regioes` | Dicionário nome → região |
 
 ## 2. Estruturas em memória (`core/diagnostico.py`)
@@ -25,6 +26,7 @@ O AutoSIMD-FOCOS **não tem banco de dados próprio**: lê as bases de `BASES_GE
 | `anomalias.Anomalias` | Grade, período (mês…ano), datas, anos, focos atuais e média histórica por célula, as três anomalias (com o sinal do programa), valores-q de Benjamini–Hochberg, totais e ρ (`docs/07` §12) |
 | `panorama.PanoramaEstado` (`recordes_regiao`, `recordes_municipios`, `anos_recorde`, `acima_no_mes`) | Máscaras das células das tabelas acima da máxima histórica e a tabela dos municípios acima da máxima no mês (`Município`, `Região`, `Focos no mês`, `Máxima anterior`, `Ano da máxima`, `Vezes a máxima`) (`docs/07` §10); `ranking_municipios` tem todos os municípios com focos no ano |
 | `cenario.RecorrenciaDoMes` | Grade proporcional, nº de anos com foco no mês por célula e os focos da semana com a recorrência da célula onde caíram (`docs/07` §11) |
+| `vulnerabilidade.AnaliseVulnerabilidade` | Localidades com exposição, vulnerabilidade, risco, motivo, perfil e qualidade do ar; eventos com vento e alcance; cones; momento; avisos (`docs/06` §9.1, `docs/07` §13) — base do boletim em PDF (`core/relatorio_vulnerabilidade.py`) |
 | `atualizacao.ResultadoAtualizacao` | Situação da busca no INPE, focos novos, dias, provisórios |
 
 ## 3. Regras

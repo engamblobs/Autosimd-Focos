@@ -9,6 +9,7 @@ ficam só na memória do programa.
 
 import io
 import math
+import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
@@ -21,7 +22,9 @@ RAIO_TERRA = 6378137.0
 TAMANHO_TILE = 256
 MAX_TILES = 30            # até ~5 × 6 tiles (≈1300–1500 px, a largura do mapa) por mapa
 DOWNLOADS_SIMULTANEOS = 8
-TEMPO_REDE_S = 15
+TEMPO_REDE_S = 8
+ESPERA_APOS_FALHA_S = 300   # depois de uma falha, os mapas saem sem imagem por 5 min (sem esperar a rede de novo)
+_ultima_falha = [0.0]
 
 
 def lonlat_para_mercator(lon, lat):
@@ -60,15 +63,21 @@ def mosaico(limites_lonlat: tuple[float, float, float, float]):
         x1, y1 = _tile(max_x, min_y, zoom)
         if (x1 - x0 + 1) * (y1 - y0 + 1) <= MAX_TILES:
             break
+    if time.monotonic() - _ultima_falha[0] < ESPERA_APOS_FALHA_S:
+        return None
     imagem = Image.new("RGB", ((x1 - x0 + 1) * TAMANHO_TILE, (y1 - y0 + 1) * TAMANHO_TILE))
     posicoes = [(tx, ty) for tx in range(x0, x1 + 1) for ty in range(y0, y1 + 1)]
     try:
-        with ThreadPoolExecutor(DOWNLOADS_SIMULTANEOS) as executor:
+        executor = ThreadPoolExecutor(DOWNLOADS_SIMULTANEOS)
+        try:                         # a primeira falha cancela o resto (não espera os outros ladrilhos)
             tiles = list(executor.map(lambda t: _baixar_tile(zoom, *t), posicoes))
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
         for (tx, ty), conteudo in zip(posicoes, tiles):
             tile = Image.open(io.BytesIO(conteudo)).convert("RGB")
             imagem.paste(tile, ((tx - x0) * TAMANHO_TILE, (ty - y0) * TAMANHO_TILE))
     except (OSError, ValueError):
+        _ultima_falha[0] = time.monotonic()
         return None
     n = 2 ** zoom
     mundo = 2 * math.pi * RAIO_TERRA

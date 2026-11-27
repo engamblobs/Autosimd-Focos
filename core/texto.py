@@ -64,3 +64,11 @@ def neutralizar_formulas(livro) -> None:
             for celula in linha:
                 if celula.data_type == "f":
                     celula.data_type = "s"
+
+
+PARTICULAS = {"de", "da", "do", "das", "dos", "e"}
+
+
+def nome_proprio(nome) -> str:
+    """SÃO FÉLIX DO XINGU → São Félix do Xingu (título do dashboard)."""
+    return " ".join(p if p in PARTICULAS and i else p.capitalize() for i, p in enumerate(str(nome).lower().split()))

@@ -2,7 +2,7 @@
 
 ## Hierarquia principal (implementada em `app.py`)
 
-Barra lateral (v0.14): navegação; parâmetros da análise (Diagnóstico) ou, no Panorama, **Relatório do cenário (PDF)** e **Focos de calor em GeoJSON**; no Diagnóstico processado, o **Pacote completo**; e, preso no rodapé, o bloco **"⋯ Base de focos (INPE) e sobre o sistema"** — recolhido; abre sozinho quando a base está sendo atualizada ("⏳ Atualizando…"), mostra "✅ Base de focos atualizada" e recolhe 5 s depois.
+Barra lateral (v0.15: botão 📺 dashboard / 📄 legado no Panorama e no Diagnóstico; no dashboard o painel recolhe para uma coluna de ícones — `docs/10` §10 e §11; downloads do diagnóstico em três botões — resumido, completo e pacote). Até a v0.14: navegação; parâmetros da análise (Diagnóstico) ou, no Panorama, **Relatório do cenário (PDF)** e **Focos de calor em GeoJSON**; no Diagnóstico processado, o **Pacote completo**; e, preso no rodapé, o bloco **"⋯ Base de focos (INPE) e sobre o sistema"** — recolhido; abre sozinho quando a base está sendo atualizada ("⏳ Atualizando…"), mostra "✅ Base de focos atualizada" e recolhe 5 s depois.
 
 Panorama em abas: Cenário atual (mapa, boletim, indicadores, semana, municípios/UCs/focos) · Municípios acima da máxima · Anomalias do mês · Ano de <ano> · Estatísticas (modelo INPE). Diagnóstico em abas: Resumo (com localização) · Cenário atual · Gráficos e rankings · Mapas · Anomalias · Áreas protegidas · Estatísticas (modelo INPE) · Metodologia.
 
@@ -19,7 +19,7 @@ O programa abre direto com a base local. A busca de focos novos no INPE roda em 
    │   │   último trimestre (13 semanas, faixas dos meses)
    │   ├── Abas: Municípios · UCs e TIs · Focos do dia da passagem
    │   ├── 📄 Gerar relatório do cenário (PDF) → ⬇️ Baixar (docs/10 §8; estatísticas do período no fim)
-   │   └── 🗺️ Focos em GeoJSON: data inicial e final → Preparar → ⬇️ Baixar (P29)
+   │   └── 🗺️ Focos em GeoJSON: data inicial e final → ⬇️ Baixar pontos de focos de calor → ⬇️ Baixar (P29)
    ├── 6 indicadores: focos no ano final até a data dos dados (× ano anterior), mesmo período do ano anterior,
    │   média do mesmo período, últimos 7 e 30 dias, municípios com focos
    ├── Mapa de kernel do ano final (estado ou região) · focos por ano (interativo) · sazonalidade
@@ -77,7 +77,15 @@ O programa abre direto com a base local. A busca de focos novos no INPE roda em 
 ## Padrões de tela
 
 - Os resultados aparecem ao clicar em **Processar** e continuam na tela até mudar o território ou o período na barra lateral (o diagnóstico fica em memória e não é recalculado a cada clique).
+- **Visualização dashboard** (pedido de 27/11/2026, modelo `REFERENCIA PARA MODO DASHBOARD.jpg`): botão **📺 Visualização dashboard / 📄 Visualização legado** no alto do painel esquerdo da página Diagnóstico; vale só para o diagnóstico de **município** (UC/TI e as outras páginas continuam como antes). Detalhes em `docs/10` §10.
+  - Painel esquerdo **recolhido** (84 px, só ícones: ☰, navegação, 📄/📺, 🚀 processar, ⬇️ pacote, ⋯); **☰** abre o painel inteiro e **« Recolher o painel** volta. Os botões funcionam recolhidos.
+- **Rodapé** (todas as páginas): logo do AutoSIMD-FOCOS; clicar nele leva à página inicial (Panorama) sem recarregar.
+- **Vulnerabilidade:** os dados ao vivo são buscados sozinhos, em segundo plano, quando a página carrega; a porcentagem aparece no canto do mapa e some ao terminar (o mapa se atualiza). O botão passou a ser "🔄 Buscar de novo agora".
+- **Diagnóstico em etapas** (pedido de 25/11/2026): as abas aparecem logo e cada uma gera só as suas figuras, na ordem das abas (Resumo → Cenário → Gráficos → Mapas → Anomalias → … → Vulnerabilidade); o que já ficou pronto aparece enquanto o resto é gerado, e o pacote PDF/.zip é montado por último. Figuras, imagens e pacote ficam guardados na sessão: mexer em qualquer controle da página não refaz nada (só trocar território, período, base ou parâmetros do relatório). O mapa sobre o satélite desiste em até 8 s se o servidor de imagens não responder e, por 5 min, sai sem imagem sem esperar a rede de novo.
 - A seção de estatísticas é um `st.fragment`: mexer nos controles dela refaz só essa seção. O PDF e o pacote só mudam ao clicar em "Usar estes parâmetros no relatório" (refaz a página inteira, sem novo download automático).
+- **Diagnóstico de município → aba "Vulnerabilidade (protótipo)"** (P42, `docs/10` §9): localidades do IBGE do município pelo risco de fogo e fumaça; botão para buscar eventos do Painel do Fogo, vento e PM2,5 (internet).
+- **Painel ⋯ (rodapé da barra lateral):** chave **Vento (Open-Meteo)** logo acima da chave **Nowcast** (P40); mapas interativos com a chave **Sentinel-2 em realce de fogo (SWIR — Painel do Fogo)** (P41).
+- **Dois cliques no nome de um município** em qualquer tabela com a coluna "Município" (rankings do diagnóstico, municípios do cenário, focos do dia, acima da máxima, ranking do Panorama) abrem o diagnóstico dele, como o clique no mapa. Na tabela dos municípios acima da máxima, **um clique** num município troca o gráfico de sazonalidade abaixo (a lista de escolha continua). Sem legenda na tela (pedido de 25/11/2026). Implementação: `tabela(df, chave=, estado=)` em `app.py`; um componente (`st.components.v2`) escuta o duplo clique e lê o texto da célula selecionada.
 - Os botões de download não recarregam a página (`on_click="ignore"`), então os resultados continuam na tela depois de baixar.
 - A base de focos e as geometrias são lidas uma vez por execução do programa (cache em memória).
 - Números no padrão brasileiro (`1.234`, `4,5%`).
